@@ -1,6 +1,7 @@
 import urllib3
 import logging
 import os.path
+import sys
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -29,11 +30,16 @@ except urllib3.exceptions.SSLError:
 filename = os.path.basename(url).replace("%20", "_")
 print(filename)
 
+chunk_size = 1024 * 256 #256KB
 with open(download_dir + filename, "wb") as out:
+	downloaded = 0 #in KBs
 	while True:
-		data = resp.read(1024)
+		data = resp.read(chunk_size)
 		if not data:
+			print("\nDownload Finished.")
 			break
 		out.write(data)
+		downloaded += sys.getsizeof(data) 
+		print ("\r{0:.2f} MB".format(downloaded/(1024 * 1024)), end="")
 
 resp.release_conn()
