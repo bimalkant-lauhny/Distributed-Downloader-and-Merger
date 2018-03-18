@@ -13,11 +13,14 @@ http = urllib3.PoolManager()
 if proxy != "":
 	http = urllib3.ProxyManager(proxy)
 
-try:
-	resp = http.request("GET", 
-						url, 
+def make_request(url):
+	return http.request("GET", 
+						url.replace("https", "http"), 
 						retries=5, 
 						preload_content=False)
+
+try:
+	resp = make_request(url)	
 except urllib3.exceptions.NewConnectionError:
 	print ("Connection Failed!")
 except urllib3.exceptions.SSLError:
