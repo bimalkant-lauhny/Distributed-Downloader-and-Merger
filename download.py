@@ -90,7 +90,7 @@ def seg_handler(url, filepath, range_left, range_right, retries, timeout):
 
 			fp.write(data)
 			downloaded += sys.getsizeof(data) 
-			print ("\r{0:.2f} MB {0:.2f}".format(downloaded), end="")
+			print ("\r{0:.2f} MB".format(downloaded), end="")
 
 	resp.release_conn()
 
@@ -131,8 +131,6 @@ if resp.headers['Accept-Ranges'] == "bytes":
 		sizes_list[index] += sizes_list[index - 1]
 		index += 1
 
-	print ("Sizes list: ", sizes_list)
-
 	# list storing tuples of byte-ranges
 	ranges_list = []
 	index = 1
@@ -140,12 +138,29 @@ if resp.headers['Accept-Ranges'] == "bytes":
 		ranges_list.append((sizes_list[index - 1],sizes_list[index] - 1))
 		index += 1
 
-	print("Byte ranges", ranges_list)
-
 	# downloading each segment
 	for f in range(args.threads):
-		seg_handler(args.url, args.dir + "/temp" + str(f), ranges_list[f][0], ranges_list[f][1], args.retries, args.timeout)
-	
+		# calling seg_handler() for each thread
+		t = threading.Thread(target=seg_handler,
+               				kwargs={
+               					'url': args.url, 
+               					'filepath': args.dir + "/temp" + str(f), 
+               					'range_left': ranges_list[f][0],
+               					'range_right': ranges_list[f][1],
+               					'retries': args.retries,
+               					'timeout': args.timeout
+               					})
+		t.setDaemon(True)
+		t.start()	
+
+	# except main_thread, calling join() for each thread
+	# it ensures that merging of parts occur only after each thread has completed downloading
+	main_thread = threading.current_thread()
+	for t in threading.enumerate():
+		if t is main_thread:
+			continue
+		t.join()	
+
 	# merging parts
 	with open(filepath,'wb') as wfd:
 		for f in range(args.threads):
