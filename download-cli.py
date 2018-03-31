@@ -5,177 +5,154 @@ import sys
 import shutil
 import argparse
 import threading
-import atexit
 import pathlib
+import socket
 
-# dir path for temp directory (for cleaning purposes)
-tempdirpath = None
-# filepath for finalcleaning (if interrupted)
-filepath = None
 
-# function for clean deletion of a file at filepath
-def delete_file(filepath):
-	try:
-		os.remove(filepath)
-	except OSError as err:
-		print("OS error: {0}".format(err))
+class DistributedDownloaderAndMerger:
 
-# create directory
-def create_dir(path):
-	try:
-		os.mkdir(path)
-	except FileExistsError:
-		print("Directory already exists!")	
+	''' Main class providing interface of the software'''
 
-# function for cleaning at program exit
-def final_clean(interrupted=False):
-	global tempdirpath	
-	if (tempdirpath != None):
+	def __init__(self):
+		self.args = None
+
+	# handles command line arguments
+	def handle_args(self):
+
+		parser = argparse.ArgumentParser()
+
+		parser.add_argument("--url", 
+			help="Enter the URL of the file (Required)")
+
+		parser.add_argument("--proxy", 
+			help='''Enter the proxy if required, 
+			default = no proxy''')
+
+		parser.add_argument("--dir", 
+			help='''Enter the directory to store the downloaded file, 
+			default = ~/Downloads/''')
+
+		parser.add_argument("--tempdir", 
+			help='''Enter the directory to store the temporary files, 
+			default = ~/Downloads/.ddmtemp/''')
+
+		parser.add_argument("--timeout", 
+			help='''Enter the request timeout in seconds,
+			default = 5.0''', 
+			type=float)
+
+		parser.add_argument("--retries", 
+			help='''Enter the number of retries,
+			default = 5''',
+			type=int)
+
+		parser.add_argument("--threads", 
+			help='''Enter the number of threads,
+			default = 2''',
+			type=int)
+
+		self.args = parser.parse_args()
+
+		self.handle_default_args()
+
+	# sets default arguments if not supplied by the user
+	def handle_default_args(self):
+
+		if not self.args.url:
+			print("You didn't supply the download URL! See --help or -h for details.")	
+			sys.exit()
+
+		if not self.args.dir:
+			self.args.dir = str(pathlib.Path.home()) + "/Downloads/"
+
+		if not self.args.tempdir:
+			self.args.tempdir = self.args.dir + "/.ddmtemp/" 
+			# create temp directory
+			self.create_dir(self.args.tempdir)
+
+		if not self.args.timeout:
+			self.args.timeout = 5.0	
+
+		if not self.args.retries:
+			self.args.retries = 5
+
+		if not self.args.threads:
+			self.args.threads = 2
+
+	# function for clean deletion of a file at filepath
+	def delete_file(self, filepath):
 		try:
-			shutil.rmtree(tempdirpath)
+			os.remove(filepath)
 		except OSError as err:
 			print("OS error: {0}".format(err))
 
-	if interrupted == True:
-		global filepath
-		delete_file(filepath)
+	# create directory at dirpath
+	def create_dir(self, dirpath):
+		try:
+			os.mkdir(dirpath)
+		except FileExistsError:
+			print("Directory already exists!")	
 
-# handles command line arguments and returns them to main()
-def args_handler():
-	parser = argparse.ArgumentParser()
-	parser.add_argument("--url", 
-						help="Enter the URL of the file (Required)")
-	parser.add_argument("--proxy", 
-						help='''Enter the proxy if required, 
-						default = no proxy''')
-	parser.add_argument("--dir", 
-						help='''Enter the directory to store the downloaded file, 
-						default = ~/Downloads/''')
-	parser.add_argument("--tempdir", 
-						help='''Enter the directory to store the temporary files, 
-						default = ~/Downloads/.ddmtemp/''')
-	parser.add_argument("--timeout", 
-						help='''Enter the request timeout in seconds,
-						default = 5.0''', 
-						type=float)
-	parser.add_argument("--retries", 
-						help='''Enter the number of retries,
-						default = 5''',
-						type=int)
-	parser.add_argument("--threads", 
-						help='''Enter the number of threads,
-						default = 2''',
-						type=int)
-	return parser.parse_args()
+	# recursive deletion of a directory at dirpath
+	def delete_dir(self, dirpath):
+		try:
+			shutil.rmtree(dirpath)
+		except OSError as err:
+			print("OS error: {0}".format(err))
 
+	# function for cleaning at program exit
+	def final_clean(self, interrupted=False):
+		self.delete_dir(self.args.tempdir)
+		if interrupted == True:
+			''' delete the partially downloaded file if user interrupted
+			the download '''
+			self.delete_file(self.filepath)
 
-# function for sending request and receiving response
-def make_request(http, url, retries, timeout, headers=None):
+	# function for sending request and receiving response
+	def make_request(self, headers=None):
 
-	try:
-		resp = http.request("GET", 
-			url.replace("https", "http"), 
-			retries=retries, 
-			timeout=timeout,
-			preload_content=False,
-			headers=headers)
-	except urllib3.exceptions.NewConnectionError:
-		# if failed to create connection
-		print ("Connection Failed!")
-	except urllib3.exceptions.SSLError:
-		# if failed to establish secure connection (https)
-		print ("SSL Error!")
+		try:
+			resp = self.http.request("GET", 
+				self.args.url.replace("https", "http"), 
+				retries=self.args.retries, 
+				timeout=self.args.timeout,
+				preload_content=False,
+				headers=headers)
+		except urllib3.exceptions.NewConnectionError:
+			# if failed to create connection
+			print ("Connection Failed!")
+		except urllib3.exceptions.SSLError:
+			# if failed to establish secure connection (https)
+			print ("SSL Error!")
 
-	return resp
+		return resp
 
+	# function which acts as handler for download threads
+	def seg_handler(self, filepath, range_left, range_right):
+		resp = self.make_request({'Range': 'bytes=%d-%d' % (range_left, range_right)})
+		chunk_size = 1024 * 256 #256KB
 
-# function which acts as handler for download threads
-def seg_handler(http, url, filepath, range_left, range_right, retries, timeout):
+		with open(filepath, "wb") as fp:
+			downloaded = 0 #in KBs
+			while True:
+				data = resp.read(chunk_size)
+				if not data:
+					print("\nDownload Finished.")
+					break
+				fp.write(data)
+				downloaded += sys.getsizeof(data) 
+				print ("\r{0:.2f} MB".format(downloaded/(1024*1024)), end="")
 
-	resp = make_request(http, url, retries, timeout, {'Range': 'bytes=%d-%d' % (range_left, range_right)})
-	
-	chunk_size = 1024 * 256 #256KB
+		resp.release_conn()
 
-	with open(filepath, "wb") as fp:
-
-		downloaded = 0 #in KBs
-
-		while True:
-			data = resp.read(chunk_size)
-
-			if not data:
-				print("\nDownload Finished.")
-				break
-
-			fp.write(data)
-			downloaded += sys.getsizeof(data) 
-			print ("\r{0:.2f} MB".format(downloaded/(1024*1024)), end="")
-
-	resp.release_conn()
-
-
-		
-
-# main function
-def main():
-	
-	args = args_handler()
-
-	if not args.url:
-		print("You didn't supply the download URL! See --help or -h for details.")	
-		sys.exit()
-
-	if not args.dir:
-		args.dir = str(pathlib.Path.home()) + "/Downloads/"
-
-	if not args.tempdir:
-		args.tempdir = args.dir + "/.ddmtemp/" 
-
-	# create temp directory
-	os.mkdir(args.tempdir)
-
-	# storing temp directory path for final cleaning
-	global tempdirpath
-	tempdirpath = args.tempdir
-
-	if not args.timeout:
-		args.timeout = 5.0	
-
-	if not args.retries:
-		args.retries = 5
-
-	if not args.threads:
-		args.threads = 2
-
-	logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-	http = urllib3.PoolManager()
-	if args.proxy:
-		http = urllib3.ProxyManager(args.proxy)
-
-	#extracting filename from URL
-	filename = os.path.basename(args.url).replace("%20", "_")
-
-	# getting complete filepath
-	global filepath
-	filepath = args.dir + "/" + filename
-
-	#making an initial request to get header information
-	resp = make_request(http, args.url, args.retries, args.timeout)
-
-	# extracting the size of file to be downloaded in bytes, from header
-	filesize = int(resp.headers['Content-Length'])
-
-	# Checking multithreaded download support
-	if resp.headers['Accept-Ranges'] == "bytes":
-
+	# function to get a list of sizes to be downloaded by each thread
+	def get_download_sizes_list(self):
 		# no of bytes per thread
-		size_per_thread = filesize//args.threads
-
+		size_per_thread = self.filesize//self.args.threads
 		# stores size to be downloaded by each thread
-		sizes_list = [size_per_thread] * args.threads
+		sizes_list = [size_per_thread] * self.args.threads
 		# remaining size not assigned to any thread 
-		rem = filesize % args.threads	
+		rem = self.filesize % self.args.threads	
 		# loop to equally assign sizes to download, to each thread
 		index = 0
 		while rem != 0:
@@ -183,6 +160,12 @@ def main():
 			rem -= 1
 			index += 1
 
+		return sizes_list
+
+	# function to get a list of ranges to be downloaded by each thread
+	def get_download_ranges_list(self):
+
+		sizes_list = self.get_download_sizes_list()
 		sizes_list.insert(0, 0)
 
 		index = 2 
@@ -197,19 +180,28 @@ def main():
 			ranges_list.append((sizes_list[index - 1],sizes_list[index] - 1))
 			index += 1
 
+		return ranges_list
+
+	# returns boolean value indicating support for range downloading
+	def range_download_support(self, resp):
+		try:
+			supported = (resp.headers['Accept-Ranges'] == 'bytes')
+		except KeyError:
+			supported = False
+
+		return supported
+
+	# function to perform multithreaded download
+	def multithreaded_download(self, ranges_list):
 		# downloading each segment
-		for f in range(args.threads):
+		for f in range(self.args.threads):
 			# calling seg_handler() for each thread
-			t = threading.Thread(target=seg_handler,
-	               				kwargs={
-	               					'http': http,
-	               					'url': args.url, 
-	               					'filepath': args.tempdir + "/temp" + str(f), 
-	               					'range_left': ranges_list[f][0],
-	               					'range_right': ranges_list[f][1],
-	               					'retries': args.retries,
-	               					'timeout': args.timeout
-	               					})
+			t = threading.Thread(target=self.seg_handler,
+				kwargs={
+				'filepath': self.args.tempdir + "/temp" + str(f), 
+				'range_left': ranges_list[f][0],
+				'range_right': ranges_list[f][1]
+				})
 			t.setDaemon(True)
 			t.start()	
 
@@ -221,33 +213,67 @@ def main():
 				continue
 			t.join()	
 
+	# function to perform merging of parts performed by multiple threads on single system
+	def merge_multithreaded_download_parts(self):
 		# merging parts
-		with open(filepath,'wb') as wfd:
-			for f in range(args.threads):
-				tempfilepath = args.tempdir + "/temp" + str(f)
+		with open(self.filepath,'wb') as wfd:
+			for f in range(self.args.threads):
+				tempfilepath = self.args.tempdir + "/temp" + str(f)
 				with open(tempfilepath, "rb") as fd:
 					shutil.copyfileobj(fd, wfd)		
 				# delete copied segment
-				delete_file(tempfilepath)
+				self.delete_file(tempfilepath)
 
-	else:
-		print('''Server doesn't support multithreaded downloads!
-				Download will be performed using single thread.''')	
-		seg_handler(http,
-					args.url, 
-					filepath, 
-					0, 
-					filesize-1, 
-					args.retries, 
-					args.timeout)
+	# function to perform file download
+	def download(self):
+		self.handle_args()
 
-	# perform final cleaning
-	final_clean(interrupted=False)	
+		if self.args.proxy:
+			self.http = urllib3.ProxyManager(self.args.proxy)
+		else:
+			self.http = urllib3.PoolManager()
+
+		#extracting filename from URL
+		self.filename = os.path.basename(self.args.url).replace("%20", "_")
+
+		# getting complete filepath
+		self.filepath = self.args.dir + "/" + self.filename
+
+		#making an initial request to get header information
+		resp = self.make_request()
+
+		# extracting the size of file to be downloaded in bytes, from header
+		self.filesize = int(resp.headers['Content-Length'])
+
+		# if server supports segmented download
+		if self.range_download_support(resp):
+			# get ranges for download for each thread
+			ranges_list = self.get_download_ranges_list()
+			# perform multithreaded download on single system
+			self.multithreaded_download(ranges_list)
+			# merge multithreaded download parts
+			self.merge_multithreaded_download_parts()
+		else:	
+			print('''Server doesn't support multithreaded downloads!
+				Download will be performed using single thread, on master system.''')	
+			self.seg_handler(self.filepath, 
+				0, 
+				self.filesize-1)
+
+		# perform final cleaning after download completion
+		self.final_clean(interrupted=False)	
+
+
+
+def main(download_object):
+	logging.getLogger("urllib3").setLevel(logging.WARNING)
+	download_object.download()
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print ('Download Interrupted! Cleaning and Exiting...')
-        final_clean(interrupted=True)
-        sys.exit(0)
+	try:
+		download_object = DistributedDownloaderAndMerger()
+		main(download_object)
+	except KeyboardInterrupt:
+		print ('Download Interrupted! Cleaning and Exiting...')
+		download_object.final_clean(interrupted=True)
+		sys.exit(0)
