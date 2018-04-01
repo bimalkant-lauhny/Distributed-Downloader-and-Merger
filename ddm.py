@@ -8,13 +8,13 @@ import threading
 import pathlib
 import socket
 
-
 class DistributedDownloaderAndMerger:
 
 	''' Main class providing interface of the software'''
 
 	def __init__(self):
 		self.args = None
+		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 	# handles command line arguments
 	def handle_args(self):
@@ -261,19 +261,4 @@ class DistributedDownloaderAndMerger:
 				self.filesize-1)
 
 		# perform final cleaning after download completion
-		self.final_clean(interrupted=False)	
-
-
-
-def main(download_object):
-	logging.getLogger("urllib3").setLevel(logging.WARNING)
-	download_object.download()
-
-if __name__ == '__main__':
-	try:
-		download_object = DistributedDownloaderAndMerger()
-		main(download_object)
-	except KeyboardInterrupt:
-		print ('Download Interrupted! Cleaning and Exiting...')
-		download_object.final_clean(interrupted=True)
-		sys.exit(0)
+		self.final_clean(interrupted=False)
