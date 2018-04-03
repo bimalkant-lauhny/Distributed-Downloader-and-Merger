@@ -7,35 +7,16 @@ import threading
 import pathlib
 import socket
 from argshandler import ArgsHandler
+from filehandler import FileHandler
 
-class DistributedDownloaderAndMerger(ArgsHandler):
+class DistributedDownloaderAndMerger(ArgsHandler, FileHandler):
 
 	''' Main class providing interface of the software'''
 
 	def __init__(self):
 		ArgsHandler.__init__(self)
+		FileHandler.__init__(self)
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-	# function for clean deletion of a file at filepath
-	def delete_file(self, filepath):
-		try:
-			os.remove(filepath)
-		except OSError as err:
-			print("OS error: {0}".format(err))
-
-	# create directory at dirpath
-	def create_dir(self, dirpath):
-		try:
-			os.mkdir(dirpath)
-		except FileExistsError:
-			print("Directory already exists!")	
-
-	# recursive deletion of a directory at dirpath
-	def delete_dir(self, dirpath):
-		try:
-			shutil.rmtree(dirpath)
-		except OSError as err:
-			print("OS error: {0}".format(err))
 
 	# function for cleaning at program exit
 	def final_clean(self, interrupted=False):
