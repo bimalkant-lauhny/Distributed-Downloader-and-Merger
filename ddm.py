@@ -8,32 +8,38 @@ import pathlib
 import socket
 from argshandler import ArgsHandler
 from filehandler import FileHandler
+from confighandler import ConfigHandler
 
-class DistributedDownloaderAndMerger(ArgsHandler, FileHandler):
+class DistributedDownloaderAndMerger(ArgsHandler, ConfigHandler, FileHandler):
 
 	''' Main class providing interface of the software'''
 
 	def __init__(self):
-		ArgsHandler.__init__(self)
+		ArgsHandler.__init__(self, sys.argv)
+		ConfigHandler.__init__(self)
 		FileHandler.__init__(self)
+		self.http = None
+		self.filepath = None
+		self.filesize = None
+		self.filename = None
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 	# function for cleaning at program exit
 	def final_clean(self, interrupted=False):
-		self.delete_dir(self.args.tempdir)
+		FileHandler.delete_dir(self, ConfigHandler.get_temp_dir(self))
 		if interrupted == True:
 			''' delete the partially downloaded file if user interrupted
 			the download '''
-			self.delete_file(self.filepath)
+			FileHandler.delete_file(self, self.filepath)
 
 	# function for sending request and receiving response
 	def make_request(self, headers=None):
 
 		try:
 			resp = self.http.request("GET", 
-				self.args.url.replace("https", "http"), 
-				retries=self.args.retries, 
-				timeout=self.args.timeout,
+				ArgsHandler.get_download_url(self).replace("https", "http"), 
+				retries=ConfigHandler.get_retries(self), 
+				timeout=ConfigHandler.get_timeouts(self),
 				preload_content=False,
 				headers=headers)
 		except urllib3.exceptions.NewConnectionError:
@@ -66,11 +72,11 @@ class DistributedDownloaderAndMerger(ArgsHandler, FileHandler):
 	# function to get a list of sizes to be downloaded by each thread
 	def get_download_sizes_list(self):
 		# no of bytes per thread
-		size_per_thread = self.filesize//self.args.threads
+		size_per_thread = self.filesize//ConfigHandler.get_threads(self)
 		# stores size to be downloaded by each thread
-		sizes_list = [size_per_thread] * self.args.threads
+		sizes_list = [size_per_thread] * ConfigHandler.get_threads(self)
 		# remaining size not assigned to any thread 
-		rem = self.filesize % self.args.threads	
+		rem = self.filesize % ConfigHandler.get_threads(self)	
 		# loop to equally assign sizes to download, to each thread
 		index = 0
 		while rem != 0:
@@ -112,11 +118,11 @@ class DistributedDownloaderAndMerger(ArgsHandler, FileHandler):
 	# function to perform multithreaded download
 	def multithreaded_download(self, ranges_list):
 		# downloading each segment
-		for f in range(self.args.threads):
+		for f in range(ConfigHandler.get_threads(self)):
 			# calling seg_handler() for each thread
 			t = threading.Thread(target=self.seg_handler,
 				kwargs={
-				'tempfilepath': self.args.tempdir + "/temp" + str(f), 
+				'tempfilepath': ConfigHandler.get_temp_dir(self) + "/temp" + str(f), 
 				'range_left': ranges_list[f][0],
 				'range_right': ranges_list[f][1]
 				})
@@ -135,27 +141,30 @@ class DistributedDownloaderAndMerger(ArgsHandler, FileHandler):
 	def merge_multithreaded_download_parts(self):
 		# merging parts
 		with open(self.filepath,'wb') as wfd:
-			for f in range(self.args.threads):
-				tempfilepath = self.args.tempdir + "/temp" + str(f)
+			for f in range(ConfigHandler.get_threads(self)):
+				tempfilepath = ConfigHandler.get_temp_dir(self) + "/temp" + str(f)
 				with open(tempfilepath, "rb") as fd:
 					shutil.copyfileobj(fd, wfd)		
 				# delete copied segment
-				self.delete_file(tempfilepath)
+				FileHandler.delete_file(self, tempfilepath)
 
 	# function to perform file download
 	def download(self):
-		self.handle_args()
-
-		if self.args.proxy:
-			self.http = urllib3.ProxyManager(self.args.proxy)
+		ConfigHandler.parse_config(self)
+		if ConfigHandler.get_proxy(self):
+			self.http = urllib3.ProxyManager(ConfigHandler.get_proxy(self))
 		else:
 			self.http = urllib3.PoolManager()
 
+		# make sure that download path and temp directory exists
+		FileHandler.create_dir(self, ConfigHandler.get_download_dir(self))
+		FileHandler.create_dir(self, ConfigHandler.get_temp_dir(self))
+
 		#extracting filename from URL
-		self.filename = os.path.basename(self.args.url).replace("%20", "_")
+		self.filename = os.path.basename(ArgsHandler.get_download_url(self)).replace("%20", "_")
 
 		# getting complete filepath
-		self.filepath = self.args.dir + "/" + self.filename
+		self.filepath = ConfigHandler.get_download_dir(self) + "/" + self.filename
 
 		#making an initial request to get header information
 		resp = self.make_request()
