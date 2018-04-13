@@ -5,7 +5,6 @@ import sys
 import shutil
 import threading
 import pathlib
-import socket
 from argshandler import ArgsHandler
 from filehandler import FileHandler
 from confighandler import ConfigHandler
