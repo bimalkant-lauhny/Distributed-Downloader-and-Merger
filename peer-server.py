@@ -4,25 +4,27 @@ import threading
 import json
 
 class PeerClientThread(threading.Thread):
-
-    def __init__(self, client, address):
+    ''' class for a thread which handles a peer-client connection'''
+    def __init__(self, client_conn, client_addr):
         threading.Thread.__init__(self)
-        self.client = client
-        self.address = address 
+        self.client_conn = client_conn
+        self.client_addr = client_addr 
 
     def run(self):
         size = 1024 
         # receive {"url":"", "range-left":"", "range-right":""} from client
-        msg = self.client.recv(size)
+        msg = self.client_conn.recv(size)
         if msg:
             msg = msg.decode()
             print("[+] Received Message: {}".format(msg))
             msg = json.loads(msg)
-            self.client.close()
-            print("[-] Client Disconnected: {}".format(self.address))
+            self.client_conn.send("Done.".encode())
+            self.client_conn.shutdown(socket.SHUT_RDWR)
+            self.client_conn.close()
+            print("[-] Client Disconnected: {}".format(self.client_addr))
 
 class ThreadedPeerServer:
-
+    ''' Multithreaded peer-server that assigns single thread to each peer-client connection'''
     def __init__(self, server_address):
         self.server_address = server_address 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -48,11 +50,12 @@ class ThreadedPeerServer:
         self.sock.listen(5)
         print("[+] Listening for clients...")
         while True:
-            client, address = self.sock.accept()
-            print("[+] Client Connected: {}".format(address))
+            client_conn, client_addr = self.sock.accept()
+            print("[+] Client Connected: {}".format(client_addr))
             #client.settimeout(60)
-            new_client_thread = PeerClientThread(client, address)
-            new_client_thread.daemon = True
+            # assigning a thread to each client connected
+            new_client_thread = PeerClientThread(client_conn, client_addr)
+            #new_client_thread.daemon = True
             new_client_thread.start()
 
     def unregisterWithTracker(self, tracker_server_address, bind_port):
@@ -70,6 +73,11 @@ class ThreadedPeerServer:
         s.close()
         print("[-] Disconnected with Tracker.")
 
+    def stop_server(self):
+        self.sock.shutdown(socket.SHUT_RDWR)
+        self.sock.close()
+        print("[-] Stopped Peer Server.")
+
 if __name__ == '__main__':
     tracker_host = ''
     tracker_port = 5000
@@ -77,15 +85,19 @@ if __name__ == '__main__':
     peer_server_host = ''
     peer_server_port = 6000
     peer_server_address = (peer_server_host, peer_server_port)
-    bind_port = 7000 # port to which peer-server is bound while communicating with tracker-server
+    bind_port = 6000 # port used by peer-server to communicate with tracker-server
     server = None
+
     try:
         server = ThreadedPeerServer(peer_server_address)
         server.registerWithTracker(tracker_server_address, bind_port)
         server.listen()
+
     except:
-        print("Oops!",sys.exc_info()[0],"occured.") 
+        print("Oops!", sys.exc_info()[0], "occured.") 
+
     finally:
+        server.stop_server()
         server.unregisterWithTracker(tracker_server_address, bind_port)
         # exit
         sys.exit(0)

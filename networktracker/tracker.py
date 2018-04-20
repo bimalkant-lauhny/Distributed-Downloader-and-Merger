@@ -1,3 +1,4 @@
+import sys
 import socket
 import threading
 
@@ -22,37 +23,42 @@ class NetTracker:
 
 class PeerThread(threading.Thread):
 
-	def __init__(self, tracker, peer, address):
+	def __init__(self, tracker, peer_conn, peer_addr):
 		threading.Thread.__init__(self)
 		self.tracker = tracker		
-		self.peer = peer 
-		self.address = address 
+		self.peer_conn = peer_conn
+		self.peer_addr = peer_addr 
 
 	def run(self):
 		size = 1024 
-		msg = self.peer.recv(size)
+		msg = self.peer_conn.recv(size)
 		if msg:
 			msg = msg.decode()
 			print("[+] Received Message: {}".format(msg))
 			if (msg == "addme"):
 				# peer-server wants to act as server
-				self.tracker.addPeer(self.address)
+				self.tracker.addPeer(self.peer_addr)
 				print("Updated trackers list: {}".format(self.tracker.getPeerServersList()))
-				self.peer.shutdown(socket.SHUT_RDWR)
-				self.peer.close()
-				print("[-] Client Disconnected: {}".format(self.address))
+				self.close_connection()
+				print("[-] Peer Server Added to List: {}".format(self.peer_addr))
 			elif (msg == "sendpeerslist"):
 				# peer-client needs peer-servers list to distribute the download
 				response = self.tracker.getPeerServersList()
 				response = str(response).encode()
-				self.peer.sendall(response)
+				self.peer_conn.sendall(response)
+				print("[+] Sent Peer Servers List to: {}".format(self.peer_addr))
+				self.close_connection()
 			elif (msg == "removeme"):
 				# peer-server wants to leave the network
-				self.tracker.removePeer(self.address)
+				self.tracker.removePeer(self.peer_addr)
 				print("Updated trackers list: {}".format(self.tracker.getPeerServersList()))
-				self.peer.shutdown(socket.SHUT_RDWR)
-				self.peer.close()
-				print("[-] Client Disconnected: {}".format(self.address))
+				self.close_connection()
+				print("[-] Peer Server removed from List: {}".format(self.peer_addr))
+
+	def close_connection(self):
+		self.peer_conn.shutdown(socket.SHUT_RDWR)
+		self.peer_conn.close()
+		print ("[-] Closed Connection with {}.".format(self.peer_addr))
 
 
 class ThreadedTrackerServer:
@@ -68,17 +74,36 @@ class ThreadedTrackerServer:
         self.sock.listen(5)
         print("[+] Listening for clients...")
         while True:
-            peer, address = self.sock.accept()
-            print("[+] Client Connected: {}".format(address))
+            peer_conn, peer_addr = self.sock.accept()
+            print("[+] Peer Connected: {}".format(peer_addr))
             #client.settimeout(60)
-            new_peer_thread = PeerThread(self.tracker, peer, address)
-            new_peer_thread.daemon = True
+            new_peer_thread = PeerThread(self.tracker, peer_conn, peer_addr)
+            #new_peer_thread.daemon = True
             new_peer_thread.start()
 
-    
+    def stop_server(self):
+        self.sock.shutdown(socket.SHUT_RDWR)
+        self.sock.close()
+        print("[-] Stopped Tracker Server.")
 
 if __name__ == "__main__":
-	tracker_host = ''
-	tracker_port = 5000
-	tracker_server_address = (tracker_host, tracker_port)
-	ThreadedTrackerServer(tracker_server_address).listen()
+    tracker_host = ''
+    tracker_port = 5000
+    tracker_server_address = (tracker_host, tracker_port)
+
+    try:
+        server = ThreadedTrackerServer(tracker_server_address)
+        server.listen()
+
+    except:
+        print("Oops!", sys.exc_info()[0], "occured...")
+
+    finally:
+
+        main_thread = threading.current_thread()
+        for t in threading.enumerate():
+            if t is main_thread:
+                continue
+            t.close_connection()
+
+        server.stop_server()
