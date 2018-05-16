@@ -9,11 +9,13 @@ from ddm import DistributedDownloaderAndMerger
 
 class PeerServerThread(threading.Thread):
     ''' establishes and handles the connection to respective peer-server'''
-    def __init__(self, url, peer_server_addr):
+    def __init__(self, url, peer_server_addr, download_range, part_num):
         threading.Thread.__init__(self)
         self.bind_port = 9000 # port used by thread to communicate with respective peer-server 
         self.peer_server_addr = peer_server_addr
         self.url = url
+        self.download_range = download_range
+        self.part_num = part_num
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(('', self.bind_port))
@@ -26,21 +28,31 @@ class PeerServerThread(threading.Thread):
         self.sock.connect(self.peer_server_addr)
         print("[+] Connected with Server at {}".format(self.peer_server_addr))
         # send {"url":"", "range-left":"", "range-right":""} to peer-server 
-        download_info = {"url": self.url, "range-left": 1234, "range-right": 4321}
+        download_info = {
+            "url": self.url, 
+            "range-left": self.download_range[0], 
+            "range-right": self.download_range[1]}
         download_info = json.dumps(download_info).encode() 
         self.sock.sendall(download_info)
         print("Download info sent: {}".format(download_info))
 
-        msg = self.sock.recv(size)
-        data = b''
-        while msg:
-            data += msg
-            msg = self.sock.recv(size)
-        data = data.decode()
-        print("[+] Received Message: {}".format(data))
-        self.close_connection()
+        filepath = '/home/code_master5/Documents/client-temp/part{}'.format(self.part_num)
+        self.receiveFilePart(filepath)
+        self.closeConnection()
 
-    def close_connection(self):
+    # receive file part from server and write at 'filepath'
+    def receiveFilePart(self, filepath):
+        size = 1024
+        print ("Receiving File part...")
+        file = open(filepath,'wb')
+        chunk = self.sock.recv(size)
+        while (chunk):
+            file.write(chunk)
+            chunk = self.sock.recv(size)
+        file.close()
+        print ("Done Receiving!")
+
+    def closeConnection(self):
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
         print("[-] Peer-Server Disconnected: {}".format(self.peer_server_addr))
@@ -71,15 +83,16 @@ class ThreadedPeerClient:
         s.close()
         print("[-] Disconnected with Tracker.")
 
-    def peerServersExist(self):
-        if len(self.peer_servers_set) > 0:
-            return True
-        return False
+    def numPeerServers(self):
+        return len(self.peer_servers_set)
 
-    def connectWithPeerServers(self):
+    def connectWithPeerServers(self, range_list):
         print("Trying to connect to peer servers...")
+        part_num = 0
         for peer_server_addr in self.peer_servers_set:
-            new_server_thread = PeerServerThread(self.url, peer_server_addr)
+            download_range = range_list[part_num]
+            new_server_thread = PeerServerThread(self.url, peer_server_addr, download_range, part_num)
+            part_num += 1
             #new_server_thread.daemon = True
             new_server_thread.start()
 
@@ -100,13 +113,15 @@ if __name__ == '__main__':
         client.fetchPeersList(tracker_server_address, bind_port)
 
         # if servers doesn't exist, use simple download
-        if not client.peerServerExist():
+        if client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
             download_object = DistributedDownloaderAndMerger()
             download_object.download()
 
         else:
-            print ("Peer Servers found! Distributing download...")  
+
+            print ("Peer Servers found! Distributing download...")
+
             # get the filesize
             req = Request()
             response = Request.makeRequest(url)
@@ -114,11 +129,12 @@ if __name__ == '__main__':
             req.closeConnection(response) 
             print ("peer-client filesize: {}".format(filesize))
 
-            # if servers exist, get the download ranges to be assigned to each
+            # get the download ranges to be assigned to each
+            parts = client.numPeerServers()
+            range_list = Calculation().get_download_ranges_list(0, filesize-1, parts)
 
             # connect with each server and send them the download details
-
-            # client.connectWithPeerServers()
+            client.connectWithPeerServers(range_list)
 
             # wait for download to complete at each server
 

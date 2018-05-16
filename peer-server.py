@@ -26,8 +26,8 @@ class PeerClientThread(threading.Thread):
             # TODO: use tracker-config get filepath, proxy, timeouts, retries etc 
 
             # generate a random name for file 
-            filepath = '/home/code_master5/Documents/temp/' + NameGenerator().generateName(12)
-            
+            filepath = '/home/code_master5/Documents/server-temp/' + NameGenerator().generateName(12)
+
             # use request to download
 
             Downloader().download(msg['url'], 
@@ -37,7 +37,7 @@ class PeerClientThread(threading.Thread):
                 proxy=None)
 
             # send the downloaded file part to peer-client 
-            self.sendFile(filepath)
+            self.sendFilePart(filepath)
 
             # let peer-client know that file sending is done
             self.client_conn.shutdown(socket.SHUT_RDWR)
@@ -47,12 +47,12 @@ class PeerClientThread(threading.Thread):
             print("[-] Client Disconnected: {}".format(self.client_addr))
 
     # function for sending file at 'filepath' through socket to client
-    def sendFile(self, filepath):
+    def sendFilePart(self, filepath):
         file = open(filepath,'rb')
         chunk = file.read(1024)
         print('Sending...')
         while (chunk):
-            client_conn.send(chunk)
+            self.client_conn.send(chunk)
             chunk = file.read(1024)
         file.close()
         print ("Done Sending File!")
