@@ -1,6 +1,7 @@
 import sys
 import socket
 import threading
+from trackerconfighandler import TrackerConfigHandler
 
 class NetTracker:
 
@@ -89,8 +90,10 @@ class ThreadedTrackerServer:
         print("[-] Stopped Tracker Server.")
 
 if __name__ == "__main__":
+
+	trackerConfig = TrackerConfigHandler()
     tracker_host = ''
-    tracker_port = 5000
+    tracker_port = trackerConfig.getTrackerPort()
     tracker_server_address = (tracker_host, tracker_port)
 
     try:
