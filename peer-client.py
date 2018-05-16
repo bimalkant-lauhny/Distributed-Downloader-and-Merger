@@ -5,6 +5,8 @@ import threading
 import json
 from calculation import Calculation
 from request import Request
+from filehandler import FileHandler
+from confighandler import ConfigHandler
 from ddm import DistributedDownloaderAndMerger 
 
 class PeerServerThread(threading.Thread):
@@ -99,6 +101,8 @@ class ThreadedPeerClient:
             #new_server_thread.daemon = True
             new_server_thread.start()
 
+
+
 if __name__ == '__main__':
     try:
         # check if download url supplied
@@ -142,18 +146,33 @@ if __name__ == '__main__':
             # wait for download to complete at each server
             # except main_thread, calling join() for each thread
             # it ensures that merging of parts occur only after each thread has completed downloading
-            print ("Threads: ", len(threading.enumerate()))
+            # print ("Threads: ", len(threading.enumerate()))
             main_thread = threading.current_thread()
             for t in threading.enumerate():
                 if t is main_thread:
                     continue
                 t.join()
+
+                
                 
             # servers will send the downloaded part
 
             # save the downloaded parts
 
             # after receiving all parts, merge them
+
+            # merging parts
+            filename = os.path.basename(url.replace("%20", "_"))
+            temp_dir = '/home/code_master5/Documents/client-temp/'  
+            filepath =  temp_dir + filename 
+            with open(filepath,'wb') as wfd:
+                for f in range(parts):
+                    tempfilepath = temp_dir + "/part" + str(f)
+                    with open(tempfilepath, "rb") as fd:
+                        shutil.copyfileobj(fd, wfd)     
+                    # delete copied segment
+                    # FileHandler.delete_file(tempfilepath)
+
 
             # done 
     except:
