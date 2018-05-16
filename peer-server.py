@@ -51,6 +51,10 @@ class PeerClientThread(threading.Thread):
             self.client_conn.close()
             print("[-] Client Disconnected: {}".format(self.client_addr))
 
+            # delete temp file
+            FileHandler().delete_file(filepath)
+            print("[-] Temp File Deleted.")
+
     # function for sending file at 'filepath' through socket to client
     def sendFilePart(self, filepath):
         file = open(filepath,'rb')
@@ -157,7 +161,6 @@ if __name__ == '__main__':
 
         server.stop_server()
         server.unregisterWithTracker(tracker_server_address, bind_port)
-        filehandle.delete_dir(temp_dir)
 
         # exit
         sys.exit(0)

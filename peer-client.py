@@ -113,17 +113,18 @@ class ThreadedPeerClient:
 
 if __name__ == '__main__':
     
-    peerClientConfig = PeerClientConfigHandler()
-    peerClientConfig.parseConfig()    
-
-    tracker_host = peerClientConfig.getTrackerHost() 
-    tracker_port = peerClientConfig.getTrackerPort() 
-    tracker_server_address = (tracker_host, tracker_port)
-    temp_dir = peerClientConfig.getTempDirPath()
-
-    filehandle = FileHandler()
-
     try:
+        peerClientConfig = PeerClientConfigHandler()
+        peerClientConfig.parseConfig()    
+
+        tracker_host = peerClientConfig.getTrackerHost() 
+        tracker_port = peerClientConfig.getTrackerPort() 
+        tracker_server_address = (tracker_host, tracker_port)
+        temp_dir = peerClientConfig.getTempDirPath()
+
+        filehandle = FileHandler()
+        filehandle.create_dir(temp_dir)
+
         # check if download url supplied
         if (len(sys.argv) < 2):
             print ("No Download URL! Exiting ...")
