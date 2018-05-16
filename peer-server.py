@@ -28,10 +28,10 @@ class PeerClientThread(threading.Thread):
             filepath = '/home/code_master5/Documents/temp/file-1' 
 
             Downloader().download(msg['url'], 
-                proxy=None, 
                 filepath=filepath, 
-                msg['range_left'], 
-                msg['range_right'])
+                range_left=msg['range_left'], 
+                range_right=msg['range_right'],
+                proxy=None)
 
             # send the downloaded file part to peer-client 
             self.sendFile(filepath)
@@ -52,7 +52,7 @@ class PeerClientThread(threading.Thread):
             client_conn.send(chunk)
             chunk = file.read(1024)
         file.close()
-        print "Done Sending File!"
+        print ("Done Sending File!")
 
 class ThreadedPeerServer:
     ''' Multithreaded peer-server that assigns single thread to each peer-client connection'''

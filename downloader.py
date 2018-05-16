@@ -6,7 +6,7 @@ class Downloader:
 	def __init__(self):
 		pass
 
-	def download(self, url, filepath, proxy=None, range_left, range_right):
+	def download(self, url, filepath, range_left, range_right, proxy=None):
 		req = Request()
 		resp = req.makeRequest(url, headers={'Range': 'bytes=%d-%d' % (range_left, range_right)})
 		chunk_size = 1024 * 256 #256KB
