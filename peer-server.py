@@ -32,8 +32,8 @@ class PeerClientThread(threading.Thread):
 
             Downloader().download(msg['url'], 
                 filepath=filepath, 
-                range_left=msg['range_left'], 
-                range_right=msg['range_right'],
+                range_left=msg['range-left'], 
+                range_right=msg['range-right'],
                 proxy=None)
 
             # send the downloaded file part to peer-client 

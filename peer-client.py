@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
             # get the filesize
             req = Request()
-            response = Request.makeRequest(url)
+            response = req.makeRequest(url, proxy="http://172.16.16.2:3128/")
             filesize = int(response.headers['Content-Length'])
             req.closeConnection(response) 
             print ("peer-client filesize: {}".format(filesize))
@@ -140,7 +140,15 @@ if __name__ == '__main__':
             client.connectWithPeerServers(range_list)
 
             # wait for download to complete at each server
-
+            # except main_thread, calling join() for each thread
+            # it ensures that merging of parts occur only after each thread has completed downloading
+            print ("Threads: ", len(threading.enumerate()))
+            main_thread = threading.current_thread()
+            for t in threading.enumerate():
+                if t is main_thread:
+                    continue
+                t.join()
+                
             # servers will send the downloaded part
 
             # save the downloaded parts
@@ -149,7 +157,7 @@ if __name__ == '__main__':
 
             # done 
     except:
-        print("Oops!", sys.exc_info()[0], "occured.")
+        print("Oops!", sys.exc_info(), "occured.")
     finally:
         # exit
         sys.exit(0)

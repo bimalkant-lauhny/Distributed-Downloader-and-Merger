@@ -1,3 +1,4 @@
+import sys
 from request import Request
 
 class Downloader:
