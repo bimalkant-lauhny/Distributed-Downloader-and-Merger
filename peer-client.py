@@ -3,6 +3,7 @@ import ast
 import sys
 import threading
 import json
+from calculation import Calculation 
 
 class PeerServerThread(threading.Thread):
     ''' establishes and handles the connection to respective peer-server'''
@@ -92,8 +93,28 @@ if __name__ == '__main__':
         tracker_server_address = (tracker_host, tracker_port)
         client = ThreadedPeerClient(url)
         bind_port = 8000 # port used by peer-client to communicate with tracker
+
+        # fetch the list of active servers
         client.fetchPeersList(tracker_server_address, bind_port)
+
+        # if servers doesn't exist, use simple download
+
+        # get the filesize
+
+        # if servers exist, get the download ranges to be assigned to each
+
+        # connect with each server and send them the download details
         client.connectWithPeerServers()
+
+        #wait for download to complete at each server
+
+        # servers will send the downloded part
+
+        # save the downloaded parts
+
+        # after receiving all parts, merge them
+
+        # done 
     except:
         print("Oops!", sys.exc_info()[0], "occured.")
     finally:

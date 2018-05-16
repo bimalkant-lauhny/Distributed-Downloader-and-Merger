@@ -90,7 +90,11 @@ if __name__ == '__main__':
 
     try:
         server = ThreadedPeerServer(peer_server_address)
+
+        # register the server with tracker
         server.registerWithTracker(tracker_server_address, bind_port)
+
+        # listen for download requests from client
         server.listen()
 
     except:
