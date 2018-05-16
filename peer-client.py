@@ -3,7 +3,9 @@ import ast
 import sys
 import threading
 import json
-from calculation import Calculation 
+from calculation import Calculation
+from request import Request
+from ddm import DistributedDownloaderAndMerger 
 
 class PeerServerThread(threading.Thread):
     ''' establishes and handles the connection to respective peer-server'''
@@ -98,23 +100,35 @@ if __name__ == '__main__':
         client.fetchPeersList(tracker_server_address, bind_port)
 
         # if servers doesn't exist, use simple download
+        if not client.peerServerExist():
+            print ("No peer servers! Using default download...")
+            download_object = DistributedDownloaderAndMerger()
+            download_object.download()
 
-        # get the filesize
+        else:
+            print ("Peer Servers found! Distributing download...")  
+            # get the filesize
+            req = Request()
+            response = Request.makeRequest(url)
+            filesize = int(response.headers['Content-Length'])
+            req.closeConnection(response) 
+            print ("peer-client filesize: {}".format(filesize))
 
-        # if servers exist, get the download ranges to be assigned to each
+            # if servers exist, get the download ranges to be assigned to each
 
-        # connect with each server and send them the download details
-        client.connectWithPeerServers()
+            # connect with each server and send them the download details
 
-        #wait for download to complete at each server
+            # client.connectWithPeerServers()
 
-        # servers will send the downloded part
+            # wait for download to complete at each server
 
-        # save the downloaded parts
+            # servers will send the downloaded part
 
-        # after receiving all parts, merge them
+            # save the downloaded parts
 
-        # done 
+            # after receiving all parts, merge them
+
+            # done 
     except:
         print("Oops!", sys.exc_info()[0], "occured.")
     finally:

@@ -1,14 +1,16 @@
 import sys
 import ddm
 
-def main(download_object):
-	download_object.download()
-
 if __name__ == '__main__':
-	try:
-		download_object = ddm.DistributedDownloaderAndMerger()
-		main(download_object)
-	except KeyboardInterrupt:
-		print ('Download Interrupted! Cleaning and Exiting...')
-		download_object.final_clean(interrupted=True)
-		sys.exit(0)
+    try:
+        # check if download url supplied
+        if (len(sys.argv) < 2):
+            print ("No Download URL! Exiting ...")
+            sys.exit(0)
+        url = sys.argv[1]
+        download_object = ddm.DistributedDownloaderAndMerger(url)
+        download_object.download()
+    except KeyboardInterrupt:
+        print ('Download Interrupted! Cleaning and Exiting...')
+        download_object.final_clean(interrupted=True)
+        sys.exit(0)

@@ -3,6 +3,7 @@ import socket
 import threading
 import json
 from downloader import Downloader 
+from stringgenerator import NameGenerator
 
 class PeerClientThread(threading.Thread):
     ''' class for a thread which handles a peer-client connection'''
@@ -24,8 +25,10 @@ class PeerClientThread(threading.Thread):
 
             # TODO: use tracker-config get filepath, proxy, timeouts, retries etc 
 
+            # generate a random name for file 
+            filepath = '/home/code_master5/Documents/temp/' + NameGenerator().generateName(12)
+            
             # use request to download
-            filepath = '/home/code_master5/Documents/temp/file-1' 
 
             Downloader().download(msg['url'], 
                 filepath=filepath, 

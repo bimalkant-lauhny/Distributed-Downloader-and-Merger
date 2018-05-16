@@ -5,18 +5,17 @@ import sys
 import shutil
 import threading
 import pathlib
-from argshandler import ArgsHandler
 from filehandler import FileHandler
 from confighandler import ConfigHandler
 
-class DistributedDownloaderAndMerger(ArgsHandler, ConfigHandler, FileHandler):
+class DistributedDownloaderAndMerger(ConfigHandler, FileHandler):
 
 	''' Main class providing interface of the software'''
 
-	def __init__(self):
-		ArgsHandler.__init__(self, sys.argv)
+	def __init__(self, url):
 		ConfigHandler.__init__(self)
 		FileHandler.__init__(self)
+		self.url = url
 		self.http = None
 		self.filepath = None
 		self.filesize = None
@@ -36,7 +35,7 @@ class DistributedDownloaderAndMerger(ArgsHandler, ConfigHandler, FileHandler):
 
 		try:
 			resp = self.http.request("GET", 
-				ArgsHandler.get_download_url(self).replace("https", "http"), 
+				self.url.replace("https", "http"), 
 				retries=ConfigHandler.get_retries(self), 
 				timeout=ConfigHandler.get_timeouts(self),
 				preload_content=False,
@@ -159,8 +158,8 @@ class DistributedDownloaderAndMerger(ArgsHandler, ConfigHandler, FileHandler):
 		FileHandler.create_dir(self, ConfigHandler.get_download_dir(self))
 		FileHandler.create_dir(self, ConfigHandler.get_temp_dir(self))
 
-		#extracting filename from URL
-		self.filename = os.path.basename(ArgsHandler.get_download_url(self)).replace("%20", "_")
+		# extracting filename from URL
+		self.filename = os.path.basename(self.url.replace("%20", "_"))
 
 		# getting complete filepath
 		self.filepath = ConfigHandler.get_download_dir(self) + "/" + self.filename
