@@ -9,7 +9,7 @@ class Downloader:
 
 	def download(self, url, filepath, range_left, range_right, proxy=None):
 		req = Request()
-		resp = req.makeRequest(url, headers={'Range': 'bytes=%d-%d' % (range_left, range_right)})
+		resp = req.makeRequest(url, proxy=proxy, headers={'Range': 'bytes=%d-%d' % (range_left, range_right)})
 		chunk_size = 1024 * 256 #256KB
 
 		with open(filepath, "wb") as fp:

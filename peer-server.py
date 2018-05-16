@@ -4,13 +4,17 @@ import threading
 import json
 from downloader import Downloader 
 from stringgenerator import NameGenerator
+from peerserverconfighandler import PeerServerConfigHandler
+from filehandler import FileHandler
 
 class PeerClientThread(threading.Thread):
     ''' class for a thread which handles a peer-client connection'''
-    def __init__(self, client_conn, client_addr):
+    def __init__(self, client_conn, client_addr, temp_dir, proxy):
         threading.Thread.__init__(self)
         self.client_conn = client_conn
         self.client_addr = client_addr 
+        self.temp_dir = temp_dir
+        self.proxy = proxy
 
     def run(self):
         size = 1024 
@@ -26,15 +30,16 @@ class PeerClientThread(threading.Thread):
             # TODO: use tracker-config get filepath, proxy, timeouts, retries etc 
 
             # generate a random name for file 
-            filepath = '/home/code_master5/Documents/server-temp/' + NameGenerator().generateName(12)
+            filepath = temp_dir + NameGenerator().generateName(12)
 
             # use request to download
 
-            Downloader().download(msg['url'], 
+            Downloader().download(
+                url=msg['url'], 
                 filepath=filepath, 
                 range_left=msg['range-left'], 
                 range_right=msg['range-right'],
-                proxy=None)
+                proxy=self.proxy)
 
             # send the downloaded file part to peer-client 
             self.sendFilePart(filepath)
@@ -80,7 +85,8 @@ class ThreadedPeerServer:
         s.close()
         print("[-] Disconnected with Tracker.")
 
-    def listen(self):
+    def listen(self, temp_dir, proxy):
+        print("Server Proxy: ", proxy)
         self.sock.listen(5)
         print("[+] Listening for clients...")
         while True:
@@ -88,7 +94,7 @@ class ThreadedPeerServer:
             print("[+] Client Connected: {}".format(client_addr))
             #client.settimeout(60)
             # assigning a thread to each client connected
-            new_client_thread = PeerClientThread(client_conn, client_addr)
+            new_client_thread = PeerClientThread(client_conn, client_addr, temp_dir, proxy)
             #new_client_thread.daemon = True
             new_client_thread.start()
 
@@ -113,29 +119,45 @@ class ThreadedPeerServer:
         print("[-] Stopped Peer Server.")
 
 if __name__ == '__main__':
-    tracker_host = ''
-    tracker_port = 5000
-    tracker_server_address = (tracker_host, tracker_port)
-    peer_server_host = ''
-    peer_server_port = 6000
-    peer_server_address = (peer_server_host, peer_server_port)
-    bind_port = 6000 # port used by peer-server to communicate with tracker-server
+
     server = None
+    filehandle = None
 
     try:
+        peerServerConfig = PeerServerConfigHandler()
+        peerServerConfig.parseConfig()
+
+        temp_dir = peerServerConfig.getTempDirPath()
+        tracker_host = peerServerConfig.getTrackerHost()
+        tracker_port = peerServerConfig.getTrackerPort()
+        tracker_server_address = (tracker_host, tracker_port)
+        peer_server_host = ''
+        peer_server_port = peerServerConfig.getPeerServerPort()
+        peer_server_address = (peer_server_host, peer_server_port)
+
+        # port used by peer-server to communicate with tracker-server
+        bind_port = peerServerConfig.getServerTrackerBindPort() 
+
+
+        filehandle = FileHandler()
+        filehandle.create_dir(temp_dir)
+
         server = ThreadedPeerServer(peer_server_address)
 
         # register the server with tracker
         server.registerWithTracker(tracker_server_address, bind_port)
 
         # listen for download requests from client
-        server.listen()
+        server.listen(temp_dir, peerServerConfig.getProxy())
 
     except:
-        print("Oops!", sys.exc_info()[0], "occured.") 
+        print("Oops!", sys.exc_info(), "occured.") 
 
     finally:
+
         server.stop_server()
         server.unregisterWithTracker(tracker_server_address, bind_port)
+        filehandle.delete_dir(temp_dir)
+
         # exit
         sys.exit(0)

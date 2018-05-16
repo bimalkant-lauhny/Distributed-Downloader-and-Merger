@@ -10,6 +10,7 @@ class Request:
 	# function for sending request and receiving response
 	def makeRequest(self, url, retries=4, timeout=5, proxy=None, headers=None):
 		http = None
+		print("Request Proxy: ", proxy)
 		if proxy:
 			http = urllib3.ProxyManager(proxy)
 		else:
