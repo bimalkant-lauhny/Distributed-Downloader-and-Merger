@@ -28,5 +28,9 @@ class Request:
 			# if failed to establish secure connection (https)
 			print ("SSL Error!")
 
-		return resp	
+		return resp
+
+	# function for closing connection after download is complete
+	def close_connection(self, response):
+		response.release_conn()
 		
