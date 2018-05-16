@@ -8,7 +8,7 @@ class Request:
 		pass
 
 	# function for sending request and receiving response
-	def make_request(self, url, retries=4, timeout=5, proxy=None, headers=None):
+	def makeRequest(self, url, retries=4, timeout=5, proxy=None, headers=None):
 		http = None
 		if proxy:
 			http = urllib3.ProxyManager(proxy)
@@ -31,6 +31,6 @@ class Request:
 		return resp
 
 	# function for closing connection after download is complete
-	def close_connection(self, response):
+	def closeConnection(self, response):
 		response.release_conn()
 		

@@ -2,6 +2,7 @@ import sys
 import socket
 import threading
 import json
+from downloader import Downloader 
 
 class PeerClientThread(threading.Thread):
     ''' class for a thread which handles a peer-client connection'''
@@ -18,10 +19,40 @@ class PeerClientThread(threading.Thread):
             msg = msg.decode()
             print("[+] Received Message: {}".format(msg))
             msg = json.loads(msg)
-            self.client_conn.send("Done.".encode())
+
+            # TODO: use Multiprocess to download using multithreading
+
+            # TODO: use tracker-config get filepath, proxy, timeouts, retries etc 
+
+            # use request to download
+            filepath = '/home/code_master5/Documents/temp/file-1' 
+
+            Downloader().download(msg['url'], 
+                proxy=None, 
+                filepath=filepath, 
+                msg['range_left'], 
+                msg['range_right'])
+
+            # send the downloaded file part to peer-client 
+            self.sendFile(filepath)
+
+            # let peer-client know that file sending is done
             self.client_conn.shutdown(socket.SHUT_RDWR)
+
+            # close connection with peer-client
             self.client_conn.close()
             print("[-] Client Disconnected: {}".format(self.client_addr))
+
+    # function for sending file at 'filepath' through socket to client
+    def sendFile(self, filepath):
+        file = open(filepath,'rb')
+        chunk = file.read(1024)
+        print('Sending...')
+        while (chunk):
+            client_conn.send(chunk)
+            chunk = file.read(1024)
+        file.close()
+        print "Done Sending File!"
 
 class ThreadedPeerServer:
     ''' Multithreaded peer-server that assigns single thread to each peer-client connection'''
