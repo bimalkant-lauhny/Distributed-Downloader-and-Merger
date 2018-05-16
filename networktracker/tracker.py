@@ -44,6 +44,8 @@ class PeerThread(threading.Thread):
 			elif (msg == "sendpeerslist"):
 				# peer-client needs peer-servers list to distribute the download
 				response = self.tracker.getPeerServersList()
+				if len(response) == 0:
+					response = "None"
 				response = str(response).encode()
 				self.peer_conn.sendall(response)
 				print("[+] Sent Peer Servers List to: {}".format(self.peer_addr))

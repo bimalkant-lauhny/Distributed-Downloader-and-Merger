@@ -76,7 +76,10 @@ class ThreadedPeerClient:
         # receive peers list as a set of address tuples
         msg = s.recv(1024)
         msg = msg.decode()
-        self.peer_servers_set = ast.literal_eval(msg)
+        if msg == "None":
+            self.peer_servers_set = set() 
+        else:
+            self.peer_servers_set = ast.literal_eval(msg)
         print("[+] Received Peers List: {}".format(self.peer_servers_set))
         # close the connection to tracker       
         s.shutdown(socket.SHUT_RDWR)
@@ -115,7 +118,7 @@ if __name__ == '__main__':
         # if servers doesn't exist, use simple download
         if client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
-            download_object = DistributedDownloaderAndMerger()
+            download_object = DistributedDownloaderAndMerger(url)
             download_object.download()
 
         else:
