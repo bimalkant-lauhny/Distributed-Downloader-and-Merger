@@ -15,6 +15,6 @@ class TrackerConfigHandler:
 		except:
 			print("No tracker port provided")
 
-	def get_tracker_port(self):
+	def getTrackerPort(self):
 		return self.tracker_port	
 
