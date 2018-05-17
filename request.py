@@ -8,7 +8,7 @@ class Request:
 		pass
 
 	# function for sending request and receiving response
-	def makeRequest(self, url, retries=4, timeout=5, proxy=None, headers=None):
+	def makeRequest(self, url, retries=5, timeout=5, proxy=None, headers=None):
 		http = None
 		print("Request Proxy: ", proxy)
 		if proxy:

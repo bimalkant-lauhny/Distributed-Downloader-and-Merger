@@ -183,7 +183,7 @@ if __name__ == '__main__':
 
             # get the download ranges to be assigned to each
             parts = client.numPeerServers()
-            range_list = Calculation().get_download_ranges_list(0, filesize-1, parts)
+            range_list = Calculation().getDownloadRangesList(0, filesize-1, parts)
 
             # connect with each server and send them the download details
             client.connectWithPeerServers(range_list, temp_dir)

@@ -8,6 +8,7 @@ import pathlib
 from filehandler import FileHandler
 from request import Request
 from downloader import Downloader
+from calculation import Calculation
 
 class MultithreadedDownloader:
 
@@ -15,6 +16,9 @@ class MultithreadedDownloader:
 
 	def __init__(self, url, proxy, temp_dir, download_dir, threads):
 		self.filehandle = FileHandler()
+		self.req_handle = Request()
+		self.download_handle = Downloader()
+		self.calculate = Calculation()
 		self.url = url
 		self.proxy = proxy
 		self.temp_dir = temp_dir
@@ -33,43 +37,6 @@ class MultithreadedDownloader:
 			''' delete the partially downloaded file if user interrupted
 			the download '''
 			self.filehandle.deleteFile(self.filepath)
-
-	# function for sending request and receiving response
-	def make_request(self, headers=None):
-
-		try:
-			resp = self.http.request("GET", 
-				self.url.replace("https", "http"), 
-				retries=5,
-				timeout=5,
-				preload_content=False,
-				headers=headers)
-		except urllib3.exceptions.NewConnectionError:
-			# if failed to create connection
-			print ("Connection Failed!")
-		except urllib3.exceptions.SSLError:
-			# if failed to establish secure connection (https)
-			print ("SSL Error!")
-
-		return resp
-
-	# function which acts as handler for download threads
-	def seg_handler(self, tempfilepath, range_left, range_right):
-		resp = self.make_request({'Range': 'bytes=%d-%d' % (range_left, range_right)})
-		chunk_size = 1024 * 256 #256KB
-
-		with open(tempfilepath, "wb") as fp:
-			downloaded = 0 #in KBs
-			while True:
-				data = resp.read(chunk_size)
-				if not data:
-					print("\nDownload Finished.")
-					break
-				fp.write(data)
-				downloaded += sys.getsizeof(data) 
-				print ("\r{0:.2f} MB".format(downloaded/(1024*1024)), end="")
-
-		resp.release_conn()
 
 	# function to get a list of sizes to be downloaded by each thread
 	def get_download_sizes_list(self):
@@ -121,12 +88,14 @@ class MultithreadedDownloader:
 	def multithreaded_download(self, ranges_list):
 		# downloading each segment
 		for f in range(self.threads):
-			# calling seg_handler() for each thread
-			t = threading.Thread(target=self.seg_handler,
+			# calling Downloader.download_range() for each thread
+			t = threading.Thread(target=self.download_handle.download_range,
 				kwargs={
-				'tempfilepath': self.temp_dir + "/temp" + str(f), 
+				'url': self.url,
+				'filepath': self.temp_dir + "/temp" + str(f), 
 				'range_left': ranges_list[f][0],
-				'range_right': ranges_list[f][1]
+				'range_right': ranges_list[f][1],
+				'proxy': self.proxy
 				})
 			t.setDaemon(True)
 			t.start()	
@@ -168,15 +137,19 @@ class MultithreadedDownloader:
 		self.filepath = self.download_dir + "/" + self.filename
 
 		#making an initial request to get header information
-		resp = self.make_request()
+		response = self.req_handle.makeRequest(
+									url=self.url,
+									proxy=self.proxy)
 
 		# extracting the size of file to be downloaded in bytes, from header
-		self.filesize = int(resp.headers['Content-Length'])
+		self.filesize = int(response.headers['Content-Length'])
 
 		# if server supports segmented download
-		if self.range_download_support(resp):
+		if self.range_download_support(response):
 			# get ranges for download for each thread
-			ranges_list = self.get_download_ranges_list()
+			ranges_list = self.calculate.getDownloadRangesList(0, 
+															self.filesize-1, 
+															self.threads)
 			# perform multithreaded download on single system
 			self.multithreaded_download(ranges_list)
 			# merge multithreaded download parts
@@ -184,9 +157,11 @@ class MultithreadedDownloader:
 		else:	
 			print('''Server doesn't support multithreaded downloads!
 				Download will be performed using single thread, on master system.''')	
-			self.seg_handler(self.filepath, 
-				0, 
-				self.filesize-1)
+			self.download_handle.download_range(self.url,
+										self.filepath,
+										0, 
+										self.filesize-1,
+										self.proxy)
 
 		# perform final cleaning after download completion
 		self.final_clean(interrupted=False)

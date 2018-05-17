@@ -5,7 +5,7 @@ class Calculation:
         pass
 
     # function to get a list of sizes to be downloaded by each thread
-    def get_download_sizes_list(self, filesize, parts):
+    def getDownloadSizesList(self, filesize, parts):
         # no of bytes per thread
         size_per_thread = filesize//parts
         # stores size to be downloaded by each thread
@@ -22,10 +22,10 @@ class Calculation:
         return sizes_list
 
     # function to get a list of ranges to be downloaded by each thread
-    def get_download_ranges_list(self, range_left, range_right, parts):
+    def getDownloadRangesList(self, range_left, range_right, parts):
 
         filesize = range_right - range_left + 1
-        sizes_list = self.get_download_sizes_list(filesize, parts)
+        sizes_list = self.getDownloadSizesList(filesize, parts)
         sizes_list.insert(0, 0)
 
         index = 2 
