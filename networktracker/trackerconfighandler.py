@@ -1,7 +1,9 @@
 import configparser
 
-
 class TrackerConfigHandler:
+
+	""" cofig details from tracker-config.ini"""
+
 	def __init__(self):
 		self.tracker_port = None
 
@@ -9,9 +11,8 @@ class TrackerConfigHandler:
 		config = configparser.ConfigParser()
 		config.read('tracker-config.ini')
 
-
 		try:
-			self.tracker_port = config['TRACKER']['TRACKER_PORT']
+			self.tracker_port = int(config['TRACKER']['TRACKER_PORT'])
 		except:
 			print("No tracker port provided")
 

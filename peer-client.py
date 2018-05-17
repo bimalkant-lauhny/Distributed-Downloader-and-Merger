@@ -9,7 +9,7 @@ from calculation import Calculation
 from request import Request
 from filehandler import FileHandler
 from peerclientconfighandler import PeerClientConfigHandler
-from ddm import DistributedDownloaderAndMerger 
+from multithreadeddownloader import MultithreadedDownloader 
 
 class PeerServerThread(threading.Thread):
     ''' establishes and handles the connection to respective peer-server'''
@@ -140,7 +140,7 @@ if __name__ == '__main__':
         # if servers doesn't exist, use simple download
         if client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
-            download_object = DistributedDownloaderAndMerger(url)
+            download_object = MultithreadedDownloader(url)
             download_object.download()
 
         else:

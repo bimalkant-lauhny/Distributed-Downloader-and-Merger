@@ -8,7 +8,7 @@ import pathlib
 from filehandler import FileHandler
 from confighandler import ConfigHandler
 
-class DistributedDownloaderAndMerger(ConfigHandler, FileHandler):
+class MultithreadedDownloader(ConfigHandler, FileHandler):
 
 	''' Main class providing interface of the software'''
 

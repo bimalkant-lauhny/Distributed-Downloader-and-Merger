@@ -91,20 +91,19 @@ class ThreadedTrackerServer:
 
 if __name__ == "__main__":
 
-	trackerConfig = TrackerConfigHandler()
-    tracker_host = ''
-    tracker_port = trackerConfig.getTrackerPort()
-    tracker_server_address = (tracker_host, tracker_port)
-
     try:
+        tracker_config = TrackerConfigHandler()
+        tracker_config.parseConfig()
+        tracker_host = ''
+        tracker_port = tracker_config.getTrackerPort()
+        tracker_server_address = (tracker_host, tracker_port)
         server = ThreadedTrackerServer(tracker_server_address)
         server.listen()
-
+    
     except:
-        print("Oops!", sys.exc_info()[0], "occured...")
+        print("Oops!", sys.exc_info(), "occured...")
 
     finally:
-
         main_thread = threading.current_thread()
         for t in threading.enumerate():
             if t is main_thread:
@@ -112,3 +111,4 @@ if __name__ == "__main__":
             t.close_connection()
 
         server.stop_server()
+    
