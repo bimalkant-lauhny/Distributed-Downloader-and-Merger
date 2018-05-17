@@ -121,16 +121,16 @@ def simple_download(url):
 if __name__ == '__main__':
     
     try:
-        peerClientConfig = PeerClientConfigHandler()
-        peerClientConfig.parseConfig()    
+        peer_client_config = PeerClientConfigHandler()
+        peer_client_config.parseConfig()    
 
-        tracker_host = peerClientConfig.getTrackerHost() 
-        tracker_port = peerClientConfig.getTrackerPort() 
+        tracker_host = peer_client_config.getTrackerHost() 
+        tracker_port = peer_client_config.getTrackerPort() 
         tracker_server_address = (tracker_host, tracker_port)
-        temp_dir = peerClientConfig.getTempDirPath()
+        temp_dir = peer_client_config.getTempDirPath()
 
         filehandle = FileHandler()
-        filehandle.create_dir(temp_dir)
+        filehandle.createDir(temp_dir)
 
         # check if download url supplied
         if (len(sys.argv) < 2):
@@ -139,25 +139,25 @@ if __name__ == '__main__':
         url = sys.argv[1]
         client = ThreadedPeerClient(url)
         # port used by peer-client to communicate with tracker
-        bind_port = peerClientConfig.getClientTrackerBindPort() 
+        bind_port = peer_client_config.getClientTrackerBindPort() 
 
         # fetch the list of active servers
         client.fetchPeersList(tracker_server_address, bind_port)
 
         # make request to url to get information about file
         req = Request()
-        response = req.makeRequest(url, proxy=peerClientConfig.getProxy())
+        response = req.makeRequest(url, proxy=peer_client_config.getProxy())
 
-        # if servers doesn't exist, use simple download
+        # if range-download is not supported, use simple download
         if response.headers['Accept-Ranges'] != 'bytes':
             print ("URL doesn't support range download! Using default download...")
             simple_download(url)
+        # if servers doesn't exist, use simple download
         elif client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
             simple_download(url)
         else:
             print ("Peer Servers found! Distributing download...")
-
             # get the filesize
             filesize = int(response.headers['Content-Length'])
             req.closeConnection(response) 
@@ -189,7 +189,7 @@ if __name__ == '__main__':
                     with open(tempfilepath, "rb") as fd:
                         shutil.copyfileobj(fd, wfd)     
                     # delete copied segment
-                    filehandle.delete_file(tempfilepath)
+                    filehandle.deleteFile(tempfilepath)
     except:
         print("Oops!", sys.exc_info(), "occured.")
     finally:

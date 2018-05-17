@@ -52,7 +52,7 @@ class PeerClientThread(threading.Thread):
             print("[-] Client Disconnected: {}".format(self.client_addr))
 
             # delete temp file
-            FileHandler().delete_file(filepath)
+            FileHandler().deleteFile(filepath)
             print("[-] Temp File Deleted.")
 
     # function for sending file at 'filepath' through socket to client
@@ -128,23 +128,23 @@ if __name__ == '__main__':
     filehandle = None
 
     try:
-        peerServerConfig = PeerServerConfigHandler()
-        peerServerConfig.parseConfig()
+        peer_server_config = PeerServerConfigHandler()
+        peer_server_config.parseConfig()
 
-        temp_dir = peerServerConfig.getTempDirPath()
-        tracker_host = peerServerConfig.getTrackerHost()
-        tracker_port = peerServerConfig.getTrackerPort()
+        temp_dir = peer_server_config.getTempDirPath()
+        tracker_host = peer_server_config.getTrackerHost()
+        tracker_port = peer_server_config.getTrackerPort()
         tracker_server_address = (tracker_host, tracker_port)
         peer_server_host = ''
-        peer_server_port = peerServerConfig.getPeerServerPort()
+        peer_server_port = peer_server_config.getPeerServerPort()
         peer_server_address = (peer_server_host, peer_server_port)
 
         # port used by peer-server to communicate with tracker-server
-        bind_port = peerServerConfig.getServerTrackerBindPort() 
+        bind_port = peer_server_config.getServerTrackerBindPort() 
 
 
         filehandle = FileHandler()
-        filehandle.create_dir(temp_dir)
+        filehandle.createDir(temp_dir)
 
         server = ThreadedPeerServer(peer_server_address)
 
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         server.registerWithTracker(tracker_server_address, bind_port)
 
         # listen for download requests from client
-        server.listen(temp_dir, peerServerConfig.getProxy())
+        server.listen(temp_dir, peer_server_config.getProxy())
 
     except:
         print("Oops!", sys.exc_info(), "occured.") 

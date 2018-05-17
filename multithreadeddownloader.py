@@ -26,11 +26,11 @@ class MultithreadedDownloader(ConfigHandler, FileHandler):
 
 	# function for cleaning at program exit
 	def final_clean(self, interrupted=False):
-		FileHandler.delete_dir(self, ConfigHandler.get_temp_dir(self))
+		FileHandler.deleteDir(self, ConfigHandler.get_temp_dir(self))
 		if interrupted == True:
 			''' delete the partially downloaded file if user interrupted
 			the download '''
-			FileHandler.delete_file(self, self.filepath)
+			FileHandler.deleteFile(self, self.filepath)
 
 	# function for sending request and receiving response
 	def make_request(self, headers=None):
@@ -146,7 +146,7 @@ class MultithreadedDownloader(ConfigHandler, FileHandler):
 				with open(tempfilepath, "rb") as fd:
 					shutil.copyfileobj(fd, wfd)		
 				# delete copied segment
-				FileHandler.delete_file(self, tempfilepath)
+				FileHandler.deleteFile(self, tempfilepath)
 
 	# function to perform file download
 	def download(self):
@@ -157,8 +157,8 @@ class MultithreadedDownloader(ConfigHandler, FileHandler):
 			self.http = urllib3.PoolManager()
 
 		# make sure that download path and temp directory exists
-		FileHandler.create_dir(self, ConfigHandler.get_download_dir(self))
-		FileHandler.create_dir(self, ConfigHandler.get_temp_dir(self))
+		FileHandler.createDir(self, ConfigHandler.get_download_dir(self))
+		FileHandler.createDir(self, ConfigHandler.get_temp_dir(self))
 
 		# extracting filename from URL
 		self.filename = os.path.basename(self.url.replace("%20", "_"))
