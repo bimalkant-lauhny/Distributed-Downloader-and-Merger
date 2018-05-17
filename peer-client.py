@@ -132,10 +132,15 @@ if __name__ == '__main__':
         tracker_host = peer_client_config.getTrackerHost() 
         tracker_port = peer_client_config.getTrackerPort() 
         tracker_server_address = (tracker_host, tracker_port)
+
         temp_dir = peer_client_config.getTempDirPath()
+        download_dir = peer_client_config.getDownloadDirPath()
+        proxy = peer_client_config.getProxy()
+        threads = peer_client_config.getNumThreads()
 
         filehandle = FileHandler()
         filehandle.createDir(temp_dir)
+        filehandle.createDir(download_dir)
 
         # check if download url supplied
         if (len(sys.argv) < 2):
@@ -151,24 +156,24 @@ if __name__ == '__main__':
 
         # make request to url to get information about file
         req = Request()
-        response = req.makeRequest(url, proxy=peer_client_config.getProxy())
+        response = req.makeRequest(url, proxy=proxy)
 
         # if range-download is not supported, use simple download
         if response.headers['Accept-Ranges'] != 'bytes':
             print ("URL doesn't support range download! Using default download...")
             simple_download(url,
-                            peer_client_config.getProxy(),
-                            peer_client_config.getTempDirPath(),
-                            peer_client_config.getDownloadDirPath(),
-                            peer_client_config.getNumThreads())
+                            proxy,
+                            temp_dir,
+                            download_dir,
+                            threads)
         # if servers doesn't exist, use simple download
         elif client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
             simple_download(url,
-                            peer_client_config.getProxy(),
-                            peer_client_config.getTempDirPath(),
-                            peer_client_config.getDownloadDirPath(),
-                            peer_client_config.getNumThreads())
+                            proxy,
+                            temp_dir,
+                            download_dir,
+                            threads)
         else:
             print ("Peer Servers found! Distributing download...")
             # get the filesize
@@ -195,7 +200,7 @@ if __name__ == '__main__':
                 
             # after receiving all parts, merge them
             filename = os.path.basename(url.replace("%20", "_"))
-            filepath =  temp_dir + filename 
+            filepath =  download_dir + '/' + filename 
             with open(filepath,'wb') as wfd:
                 for f in range(parts):
                     tempfilepath = temp_dir + "/part" + str(f)
