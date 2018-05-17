@@ -76,7 +76,7 @@ class ThreadedPeerServer:
 
     def registerWithTracker(self, tracker_server_address, bind_port):
         # connect to tracker
-        print ("Tracker addr: ", tracker_server_address)
+        print ("Tracker address: ", tracker_server_address)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(('', bind_port))
@@ -128,40 +128,39 @@ if __name__ == '__main__':
     server = None
     filehandle = None
 
-    # try:
-    peer_server_config = PeerServerConfigHandler()
-    peer_server_config.parseConfig()
+    try:
+        peer_server_config = PeerServerConfigHandler()
+        peer_server_config.parseConfig()
 
-    temp_dir = peer_server_config.getTempDirPath()
-    tracker_host = peer_server_config.getTrackerHost()
-    tracker_port = peer_server_config.getTrackerPort()
-    tracker_server_address = (tracker_host, tracker_port)
-    peer_server_host = ''
-    peer_server_port = peer_server_config.getPeerServerPort()
-    peer_server_address = (peer_server_host, peer_server_port)
+        temp_dir = peer_server_config.getTempDirPath()
+        tracker_host = peer_server_config.getTrackerHost()
+        tracker_port = peer_server_config.getTrackerPort()
+        tracker_server_address = (tracker_host, tracker_port)
+        peer_server_host = ''
+        peer_server_port = peer_server_config.getPeerServerPort()
+        peer_server_address = (peer_server_host, peer_server_port)
 
-    # port used by peer-server to communicate with tracker-server
-    bind_port = peer_server_config.getServerTrackerBindPort() 
+        # port used by peer-server to communicate with tracker-server
+        bind_port = peer_server_config.getServerTrackerBindPort() 
 
+        filehandle = FileHandler()
+        filehandle.createDir(temp_dir)
 
-    filehandle = FileHandler()
-    filehandle.createDir(temp_dir)
+        server = ThreadedPeerServer(peer_server_address)
 
-    server = ThreadedPeerServer(peer_server_address)
+        # register the server with tracker
+        server.registerWithTracker(tracker_server_address, bind_port)
 
-    # register the server with tracker
-    server.registerWithTracker(tracker_server_address, bind_port)
+        # listen for download requests from client
+        server.listen(temp_dir, peer_server_config.getProxy())
 
-    # listen for download requests from client
-    server.listen(temp_dir, peer_server_config.getProxy())
+    except:
+        print("Oops!", sys.exc_info(), "occured.") 
 
-    # except:
-    #     print("Oops!", sys.exc_info(), "occured.") 
+    finally:
 
-    # finally:
+        server.stop_server()
+        server.unregisterWithTracker(tracker_server_address, bind_port)
 
-    #     server.stop_server()
-    #     server.unregisterWithTracker(tracker_server_address, bind_port)
-
-    #     # exit
-    #     sys.exit(0)
+        # exit
+        sys.exit(0)
