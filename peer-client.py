@@ -114,8 +114,13 @@ class ThreadedPeerClient:
 # function to dispatch download task to MulthreadedDownloader
 # CASE 1: if there are no servers
 # CASE 2: if range download is not supported 
-def simple_download(url):
-    download_object = MultithreadedDownloader(url)
+def simple_download(url, proxy, temp_dir, download_dir, threads):
+    download_object = MultithreadedDownloader(
+                        url, 
+                        proxy, 
+                        temp_dir,
+                        download_dir,
+                        threads)
     download_object.download()
 
 if __name__ == '__main__':
@@ -151,11 +156,19 @@ if __name__ == '__main__':
         # if range-download is not supported, use simple download
         if response.headers['Accept-Ranges'] != 'bytes':
             print ("URL doesn't support range download! Using default download...")
-            simple_download(url)
+            simple_download(url,
+                            peer_client_config.getProxy(),
+                            peer_client_config.getTempDirPath(),
+                            peer_client_config.getDownloadDirPath(),
+                            peer_client_config.getNumThreads())
         # if servers doesn't exist, use simple download
         elif client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
-            simple_download(url)
+            simple_download(url,
+                            peer_client_config.getProxy(),
+                            peer_client_config.getTempDirPath(),
+                            peer_client_config.getDownloadDirPath(),
+                            peer_client_config.getNumThreads())
         else:
             print ("Peer Servers found! Distributing download...")
             # get the filesize

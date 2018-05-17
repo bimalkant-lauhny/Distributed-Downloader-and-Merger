@@ -8,7 +8,10 @@ class PeerClientConfigHandler:
 		self.tracker_host = None
 		self.tracker_port = None
 		self.client_tracker_bind_port = None
+		self.proxy = None
+		self.threads = None
 		self.temp_dir = None
+		self.download_dir = None
 
 	def parseConfig(self):
 		config = configparser.ConfigParser()
@@ -48,10 +51,22 @@ class PeerClientConfigHandler:
 			self.temp_dir = str(pathlib.Path.home()) + "/Downloads/client-temp/"
 
 		try:
+			self.download_dir = config['CLIENT']['DOWNLOAD_DIR'] 
+		except KeyError:
+			print("No download directory provided! Setting default to ~/Downloads.")	
+			self.download_dir = str(pathlib.Path.home()) + "/Downloads/"
+
+		try:
 			self.proxy = config['CLIENT']['PROXY']
 		except KeyError:
 			print ("No proxy provided!")
 			self.proxy = None
+
+		try:
+			self.threads = int(config['CLIENT']['THREADS'])
+		except KeyError:
+			print("Number of download threads are not specified! Setting default to 4 threads.")	
+			self.threads = 4 
 
 	def getPeerClientPort(self):
 		return self.peer_server_port
@@ -68,8 +83,14 @@ class PeerClientConfigHandler:
 	def getTempDirPath(self):
 		return self.temp_dir
 
+	def getDownloadDirPath(self):
+		return self.download_dir
+
 	def getProxy(self):
 		return self.proxy
+
+	def getNumThreads(self):
+		return self.threads
 		
 
 
