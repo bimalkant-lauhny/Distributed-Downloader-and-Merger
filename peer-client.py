@@ -30,7 +30,6 @@ class PeerServerThread(threading.Thread):
         size = 1024
         # connect to peer-server 
         print("[+] Trying to connect to {}".format(self.peer_server_addr))
-        input("Connect to {}:".format(self.peer_server_addr))
         self.sock.connect(self.peer_server_addr)
         print("[+] Connected with Server at {}".format(self.peer_server_addr))
         # send {"url":"", "range-left":"", "range-right":""} to peer-server 
@@ -114,13 +113,17 @@ class ThreadedPeerClient:
 # function to dispatch download task to MulthreadedDownloader
 # CASE 1: if there are no servers
 # CASE 2: if range download is not supported 
-def simple_download(url, proxy, temp_dir, download_dir, threads):
+def simple_download(url, proxy, temp_dir, download_dir, threads, filename, 
+                    filepath, filesize):
     download_object = MultithreadedDownloader(
                         url, 
                         proxy, 
                         temp_dir,
                         download_dir,
-                        threads)
+                        threads,
+                        filename,
+                        filepath,
+                        filesize)
     download_object.download()
 
 if __name__ == '__main__':
@@ -139,6 +142,7 @@ if __name__ == '__main__':
         threads = peer_client_config.getNumThreads()
 
         filehandle = FileHandler()
+        # make sure that the temp_dir and download_dir exist
         filehandle.createDir(temp_dir)
         filehandle.createDir(download_dir)
 
@@ -157,6 +161,12 @@ if __name__ == '__main__':
         # make request to url to get information about file
         req = Request()
         response = req.makeRequest(url, proxy=proxy)
+        req.closeConnection(response) 
+
+        # get the filesize
+        filesize = int(response.headers['Content-Length'])
+        filename = os.path.basename(url.replace("%20", "_"))
+        filepath =  download_dir + '/' + filename 
 
         # if range-download is not supported, use simple download
         if response.headers['Accept-Ranges'] != 'bytes':
@@ -165,7 +175,10 @@ if __name__ == '__main__':
                             proxy,
                             temp_dir,
                             download_dir,
-                            threads)
+                            threads,
+                            filename,
+                            filepath,
+                            filesize)
         # if servers doesn't exist, use simple download
         elif client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
@@ -173,12 +186,12 @@ if __name__ == '__main__':
                             proxy,
                             temp_dir,
                             download_dir,
-                            threads)
+                            threads,
+                            filename,
+                            filepath,
+                            filesize)
         else:
             print ("Peer Servers found! Distributing download...")
-            # get the filesize
-            filesize = int(response.headers['Content-Length'])
-            req.closeConnection(response) 
             print ("peer-client filesize: {}".format(filesize))
 
             # get the download ranges to be assigned to each
@@ -199,8 +212,6 @@ if __name__ == '__main__':
                 t.join()
                 
             # after receiving all parts, merge them
-            filename = os.path.basename(url.replace("%20", "_"))
-            filepath =  download_dir + '/' + filename 
             with open(filepath,'wb') as wfd:
                 for f in range(parts):
                     tempfilepath = temp_dir + "/part" + str(f)

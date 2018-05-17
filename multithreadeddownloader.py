@@ -14,7 +14,8 @@ class MultithreadedDownloader:
 
 	"""Main class providing interface of the software"""
 
-	def __init__(self, url, proxy, temp_dir, download_dir, threads):
+	def __init__(self, url, proxy, temp_dir, download_dir, threads, filename, 
+				filepath, filesize):
 		self.filehandle = FileHandler()
 		self.req_handle = Request()
 		self.download_handle = Downloader()
@@ -24,10 +25,9 @@ class MultithreadedDownloader:
 		self.temp_dir = temp_dir
 		self.download_dir = download_dir
 		self.threads = threads
-		self.http = None
-		self.filepath = None
-		self.filesize = None
-		self.filename = None
+		self.filepath = filepath 
+		self.filesize = filesize 
+		self.filename = filename 
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 	# function for cleaning at program exit
@@ -37,43 +37,6 @@ class MultithreadedDownloader:
 			''' delete the partially downloaded file if user interrupted
 			the download '''
 			self.filehandle.deleteFile(self.filepath)
-
-	# function to get a list of sizes to be downloaded by each thread
-	def get_download_sizes_list(self):
-		# no of bytes per thread
-		size_per_thread = self.filesize//self.threads
-		# stores size to be downloaded by each thread
-		sizes_list = [size_per_thread] * self.threads 
-		# remaining size not assigned to any thread 
-		rem = self.filesize % self.threads	
-		# loop to equally assign sizes to download, to each thread
-		index = 0
-		while rem != 0:
-			sizes_list[index] += 1
-			rem -= 1
-			index += 1
-
-		return sizes_list
-
-	# function to get a list of ranges to be downloaded by each thread
-	def get_download_ranges_list(self):
-
-		sizes_list = self.get_download_sizes_list()
-		sizes_list.insert(0, 0)
-
-		index = 2 
-		while index < len(sizes_list):
-			sizes_list[index] += sizes_list[index - 1]
-			index += 1
-
-		# list storing tuples of byte-ranges
-		ranges_list = []
-		index = 1
-		while index < len(sizes_list):
-			ranges_list.append((sizes_list[index - 1],sizes_list[index] - 1))
-			index += 1
-
-		return ranges_list
 
 	# returns boolean value indicating support for range downloading
 	def range_download_support(self, resp):
@@ -121,28 +84,11 @@ class MultithreadedDownloader:
 
 	# function to perform file download
 	def download(self):
-		if self.proxy:
-			self.http = urllib3.ProxyManager(self.proxy)
-		else:
-			self.http = urllib3.PoolManager()
-
-		# make sure that download path and temp directory exists
-		self.filehandle.createDir(self.download_dir)
-		self.filehandle.createDir(self.temp_dir)
-
-		# extracting filename from URL
-		self.filename = os.path.basename(self.url.replace("%20", "_"))
-
-		# getting complete filepath
-		self.filepath = self.download_dir + "/" + self.filename
 
 		#making an initial request to get header information
 		response = self.req_handle.makeRequest(
 									url=self.url,
 									proxy=self.proxy)
-
-		# extracting the size of file to be downloaded in bytes, from header
-		self.filesize = int(response.headers['Content-Length'])
 
 		# if server supports segmented download
 		if self.range_download_support(response):
