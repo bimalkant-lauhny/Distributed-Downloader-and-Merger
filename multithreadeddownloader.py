@@ -7,6 +7,8 @@ import threading
 import pathlib
 from filehandler import FileHandler
 from confighandler import ConfigHandler
+from request import Request
+from downloader import Downloader
 
 class MultithreadedDownloader(ConfigHandler, FileHandler):
 

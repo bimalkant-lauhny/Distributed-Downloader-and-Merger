@@ -34,7 +34,7 @@ class PeerClientThread(threading.Thread):
 
             # use request to download
 
-            Downloader().download(
+            Downloader().download_range(
                 url=msg['url'], 
                 filepath=filepath, 
                 range_left=msg['range-left'], 

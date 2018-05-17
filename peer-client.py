@@ -111,6 +111,13 @@ class ThreadedPeerClient:
 
 
 
+# function to dispatch download task to MulthreadedDownloader
+# CASE 1: if there are no servers
+# CASE 2: if range download is not supported 
+def simple_download(url):
+    download_object = MultithreadedDownloader(url)
+    download_object.download()
+
 if __name__ == '__main__':
     
     try:
@@ -137,19 +144,21 @@ if __name__ == '__main__':
         # fetch the list of active servers
         client.fetchPeersList(tracker_server_address, bind_port)
 
+        # make request to url to get information about file
+        req = Request()
+        response = req.makeRequest(url, proxy=peerClientConfig.getProxy())
+
         # if servers doesn't exist, use simple download
-        if client.numPeerServers() == 0:
+        if response.headers['Accept-Ranges'] != 'bytes':
+            print ("URL doesn't support range download! Using default download...")
+            simple_download(url)
+        elif client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
-            download_object = MultithreadedDownloader(url)
-            download_object.download()
-
+            simple_download(url)
         else:
-
             print ("Peer Servers found! Distributing download...")
 
             # get the filesize
-            req = Request()
-            response = req.makeRequest(url, proxy=peerClientConfig.getProxy())
             filesize = int(response.headers['Content-Length'])
             req.closeConnection(response) 
             print ("peer-client filesize: {}".format(filesize))
@@ -163,21 +172,15 @@ if __name__ == '__main__':
 
             # wait for download to complete at each server
             # except main_thread, calling join() for each thread
-            # it ensures that merging of parts occur only after each thread has completed downloading
-            # print ("Threads: ", len(threading.enumerate()))
+            # it ensures that merging of parts occur only after each thread has -
+            # received downloaded part from respective server 
             main_thread = threading.current_thread()
             for t in threading.enumerate():
                 if t is main_thread:
                     continue
                 t.join()
                 
-            # servers will send the downloaded part
-
-            # save the downloaded parts
-
             # after receiving all parts, merge them
-
-            # merging parts
             filename = os.path.basename(url.replace("%20", "_"))
             filepath =  temp_dir + filename 
             with open(filepath,'wb') as wfd:
@@ -187,7 +190,6 @@ if __name__ == '__main__':
                         shutil.copyfileobj(fd, wfd)     
                     # delete copied segment
                     filehandle.delete_file(tempfilepath)
-            # done 
     except:
         print("Oops!", sys.exc_info(), "occured.")
     finally:
