@@ -7,39 +7,27 @@ import threading
 import pathlib
 from filehandler import FileHandler
 from request import Request
-from downloader import Downloader
 from calculation import Calculation
 
 class MultithreadedDownloader:
 
 	"""Main class providing interface of the software"""
 
-	def __init__(self, url, proxy, temp_dir, download_dir, threads, filename, 
-				filepath, filesize):
+	def __init__(self):
 		self.filehandle = FileHandler()
-		self.req_handle = Request()
-		self.download_handle = Downloader()
+		self.request_handle = Request()
 		self.calculate = Calculation()
-		self.url = url
-		self.proxy = proxy
-		self.temp_dir = temp_dir
-		self.download_dir = download_dir
-		self.threads = threads
-		self.filepath = filepath 
-		self.filesize = filesize 
-		self.filename = filename 
+		self.url = None 
+		self.range_left = None
+		self.range_right = None
+		self.proxy = None 
+		self.temp_dir = None 
+		self.threads = None 
+		self.filepath = None 
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-	# function for cleaning at program exit
-	def final_clean(self, interrupted=False):
-		self.filehandle.deleteDir(self.temp_dir)
-		if interrupted == True:
-			''' delete the partially downloaded file if user interrupted
-			the download '''
-			self.filehandle.deleteFile(self.filepath)
-
 	# returns boolean value indicating support for range downloading
-	def range_download_support(self, resp):
+	def rangeDownloadSupport(self, resp):
 		try:
 			supported = (resp.headers['Accept-Ranges'] == 'bytes')
 		except KeyError:
@@ -48,11 +36,11 @@ class MultithreadedDownloader:
 		return supported
 
 	# function to perform multithreaded download
-	def multithreaded_download(self, ranges_list):
+	def multithreadedDownload(self, ranges_list):
 		# downloading each segment
 		for f in range(self.threads):
 			# calling Downloader.download_range() for each thread
-			t = threading.Thread(target=self.download_handle.download_range,
+			t = threading.Thread(target=self.request_handle.downloadRange,
 				kwargs={
 				'url': self.url,
 				'filepath': self.temp_dir + "/temp" + str(f), 
@@ -72,7 +60,7 @@ class MultithreadedDownloader:
 			t.join()	
 
 	# function to perform merging of parts performed by multiple threads on single system
-	def merge_multithreaded_download_parts(self):
+	def mergeMultithreadedDownloadParts(self):
 		# merging parts
 		with open(self.filepath,'wb') as wfd:
 			for f in range(self.threads):
@@ -83,31 +71,32 @@ class MultithreadedDownloader:
 				self.filehandle.deleteFile(tempfilepath)
 
 	# function to perform file download
-	def download(self):
+	def download(self, url, range_left, range_right, filepath, 
+				temp_dir, response, threads, proxy=None):
 
-		#making an initial request to get header information
-		response = self.req_handle.makeRequest(
-									url=self.url,
-									proxy=self.proxy)
+		self.url = url
+		self.range_right = range_right
+		self.range_left = range_left
+		self.filepath = filepath		
+		self.temp_dir = temp_dir
+		self.threads = threads
+		self.proxy = proxy
 
 		# if server supports segmented download
-		if self.range_download_support(response):
+		if self.rangeDownloadSupport(response):
 			# get ranges for download for each thread
-			ranges_list = self.calculate.getDownloadRangesList(0, 
-															self.filesize-1, 
+			ranges_list = self.calculate.getDownloadRangesList(self.range_left, 
+															self.range_right,
 															self.threads)
 			# perform multithreaded download on single system
-			self.multithreaded_download(ranges_list)
+			self.multithreadedDownload(ranges_list)
 			# merge multithreaded download parts
-			self.merge_multithreaded_download_parts()
+			self.mergeMultithreadedDownloadParts()
 		else:	
 			print('''Server doesn't support multithreaded downloads!
 				Download will be performed using single thread, on master system.''')	
-			self.download_handle.download_range(self.url,
+			self.request_handle.downloadRange(self.url,
 										self.filepath,
-										0, 
-										self.filesize-1,
+										self.range_left, 
+										self.range_right,
 										self.proxy)
-
-		# perform final cleaning after download completion
-		self.final_clean(interrupted=False)

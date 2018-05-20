@@ -4,7 +4,7 @@ import pathlib
 class PeerClientConfigHandler:
 	"""Class for PeerClientConfigHandler"""
 	def __init__(self):
-		self.peer_server_port = None
+		self.client_server_bind_port = None
 		self.tracker_host = None
 		self.tracker_port = None
 		self.client_tracker_bind_port = None
@@ -18,11 +18,11 @@ class PeerClientConfigHandler:
 		config.read('peer-client-config.ini')
 
 		try:
-			self.peer_server_port = int(config['CLIENT']['PEER_SERVER_PORT'])
+			self.client_server_bind_port = int(config['CLIENT']['CLIENT_SERVER_BIND_PORT'])
 
 		except KeyError:
 			print ("No peer_server_port provided!")
-			self.peer_server_port = 9000
+			self.client_server_bind_port = 8000
 
 		try:
 			self.tracker_port = int(config['CLIENT']['TRACKER_PORT'])
@@ -68,8 +68,8 @@ class PeerClientConfigHandler:
 			print("Number of download threads are not specified! Setting default to 4 threads.")	
 			self.threads = 4 
 
-	def getPeerClientPort(self):
-		return self.peer_server_port
+	def getClientServerBindPort(self):
+		return self.client_server_bind_port
 
 	def getTrackerPort(self):
 		return self.tracker_port

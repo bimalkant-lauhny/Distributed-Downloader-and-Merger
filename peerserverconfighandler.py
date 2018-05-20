@@ -51,6 +51,12 @@ class PeerServerConfigHandler:
 			print ("No proxy provided!")
 			self.proxy = None
 
+		try:
+			self.threads = int(config['SERVER']['THREADS'])
+		except KeyError:
+			print("Number of download threads are not specified! Setting default to 4 threads.")	
+			self.threads = 4 
+
 	def getPeerServerPort(self):
 		return self.peer_server_port
 
@@ -68,3 +74,6 @@ class PeerServerConfigHandler:
 
 	def getProxy(self):
 		return self.proxy
+
+	def getNumThreads(self):
+		return self.threads

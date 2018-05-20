@@ -13,10 +13,12 @@ from multithreadeddownloader import MultithreadedDownloader
 
 class PeerServerThread(threading.Thread):
     ''' establishes and handles the connection to respective peer-server'''
-    def __init__(self, url, peer_server_addr, download_range, part_num, temp_dir):
+    def __init__(self, url, peer_server_addr, download_range, part_num, 
+                temp_dir, client_server_bind_port):
 
         threading.Thread.__init__(self)
-        self.bind_port = 9000 # port used by thread to communicate with respective peer-server 
+        # port used by thread to communicate with respective peer-server 
+        self.client_server_bind_port = client_server_bind_port 
         self.peer_server_addr = peer_server_addr
         self.url = url
         self.temp_dir = temp_dir
@@ -24,7 +26,7 @@ class PeerServerThread(threading.Thread):
         self.part_num = part_num
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(('', self.bind_port))
+        self.sock.bind(('', self.client_server_bind_port))
 
     def run(self):
         size = 1024
@@ -68,11 +70,11 @@ class ThreadedPeerClient:
         self.url = url
         self.peer_servers_set = None	
 
-    def fetchPeersList(self, tracker_server_address, bind_port):
+    def fetchPeersList(self, tracker_server_address, client_tracker_bind_port):
         # connect to tracker
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(('', bind_port))
+        s.bind(('', client_tracker_bind_port))
         s.connect(tracker_server_address)
         print("[+] Connected with Tracker.")
         # ask the tracker for peers list
@@ -94,7 +96,7 @@ class ThreadedPeerClient:
     def numPeerServers(self):
         return len(self.peer_servers_set)
 
-    def connectWithPeerServers(self, range_list, temp_dir):
+    def connectWithPeerServers(self, range_list, temp_dir, client_server_bind_port):
         print("Trying to connect to peer servers...")
         part_num = 0
         for peer_server_addr in self.peer_servers_set:
@@ -103,28 +105,11 @@ class ThreadedPeerClient:
                                     peer_server_addr, 
                                     download_range, 
                                     part_num,
-                                    temp_dir)
+                                    temp_dir,
+                                    client_server_bind_port)
             part_num += 1
             #new_server_thread.daemon = True
             new_server_thread.start()
-
-
-
-# function to dispatch download task to MulthreadedDownloader
-# CASE 1: if there are no servers
-# CASE 2: if range download is not supported 
-def simple_download(url, proxy, temp_dir, download_dir, threads, filename, 
-                    filepath, filesize):
-    download_object = MultithreadedDownloader(
-                        url, 
-                        proxy, 
-                        temp_dir,
-                        download_dir,
-                        threads,
-                        filename,
-                        filepath,
-                        filesize)
-    download_object.download()
 
 if __name__ == '__main__':
     
@@ -153,10 +138,10 @@ if __name__ == '__main__':
         url = sys.argv[1]
         client = ThreadedPeerClient(url)
         # port used by peer-client to communicate with tracker
-        bind_port = peer_client_config.getClientTrackerBindPort() 
+        client_tracker_bind_port = peer_client_config.getClientTrackerBindPort() 
 
         # fetch the list of active servers
-        client.fetchPeersList(tracker_server_address, bind_port)
+        client.fetchPeersList(tracker_server_address, client_tracker_bind_port)
 
         # make request to url to get information about file
         req = Request()
@@ -171,25 +156,13 @@ if __name__ == '__main__':
         # if range-download is not supported, use simple download
         if response.headers['Accept-Ranges'] != 'bytes':
             print ("URL doesn't support range download! Using default download...")
-            simple_download(url,
-                            proxy,
-                            temp_dir,
-                            download_dir,
-                            threads,
-                            filename,
-                            filepath,
-                            filesize)
+            MultithreadedDownloader().download(url, 0, filesize-1, filepath, 
+                                            temp_dir, response, threads, proxy)
         # if servers doesn't exist, use simple download
         elif client.numPeerServers() == 0:
             print ("No peer servers! Using default download...")
-            simple_download(url,
-                            proxy,
-                            temp_dir,
-                            download_dir,
-                            threads,
-                            filename,
-                            filepath,
-                            filesize)
+            MultithreadedDownloader().download(url, 0, filesize-1, filepath, 
+                                            temp_dir, response, threads, proxy)
         else:
             print ("Peer Servers found! Distributing download...")
             print ("peer-client filesize: {}".format(filesize))
@@ -199,7 +172,8 @@ if __name__ == '__main__':
             range_list = Calculation().getDownloadRangesList(0, filesize-1, parts)
 
             # connect with each server and send them the download details
-            client.connectWithPeerServers(range_list, temp_dir)
+            client_server_bind_port = peer_client_config.getClientServerBindPort()
+            client.connectWithPeerServers(range_list, temp_dir, client_server_bind_port)
 
             # wait for download to complete at each server
             # except main_thread, calling join() for each thread
@@ -220,7 +194,11 @@ if __name__ == '__main__':
                     # delete copied segment
                     filehandle.deleteFile(tempfilepath)
     except:
-        print("Oops!", sys.exc_info(), "occured.")
+        print("Oops!", sys.exc_info()[0], "occured.")
+        # delete the file if error occured
+        filehandle.deleteFile(filepath)
     finally:
+        # delete temporary directory
+        filehandle.deleteDir(temp_dir)
         # exit
         sys.exit(0)
