@@ -6,7 +6,6 @@ import shutil
 import threading
 import pathlib
 from filehandler import FileHandler
-from request import Request
 from downloader import Downloader
 from calculation import Calculation
 
@@ -14,20 +13,19 @@ class MultithreadedDownloader:
 
 	"""Main class providing interface of the software"""
 
-	def __init__(self, url, proxy, temp_dir, download_dir, threads, filename, 
-				filepath, filesize):
+	def __init__(self):
 		self.filehandle = FileHandler()
-		self.req_handle = Request()
 		self.download_handle = Downloader()
 		self.calculate = Calculation()
-		self.url = url
-		self.proxy = proxy
-		self.temp_dir = temp_dir
-		self.download_dir = download_dir
-		self.threads = threads
-		self.filepath = filepath 
-		self.filesize = filesize 
-		self.filename = filename 
+		self.url = None 
+		self.range_left = None
+		self.range_right = None
+		self.proxy = None 
+		self.temp_dir = None 
+		self.threads = None 
+		self.filepath = None 
+		self.filesize = None 
+		self.filename = None 
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 	# function for cleaning at program exit
@@ -83,12 +81,18 @@ class MultithreadedDownloader:
 				self.filehandle.deleteFile(tempfilepath)
 
 	# function to perform file download
-	def download(self):
+	def download(self, url, range_left, range_right, filename, filepath, 
+				filesize, temp_dir, response, threads, proxy=None):
 
-		#making an initial request to get header information
-		response = self.req_handle.makeRequest(
-									url=self.url,
-									proxy=self.proxy)
+		self.url = url
+		self.range_right = range_right
+		self.range_left = range_left
+		self.filename = filename
+		self.filesize = filesize
+		self.filepath = filepath		
+		self.temp_dir = temp_dir
+		self.threads = threads
+		self.proxy = proxy
 
 		# if server supports segmented download
 		if self.range_download_support(response):
