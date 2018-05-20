@@ -1,19 +1,22 @@
 import sys
 import socket
 import threading
+import multiprocessing
 import json
 from downloader import Downloader 
+from multithreadeddownloader import MultithreadedDownloader
 from stringgenerator import NameGenerator
 from peerserverconfighandler import PeerServerConfigHandler
 from filehandler import FileHandler
 
 class PeerClientThread(threading.Thread):
     ''' class for a thread which handles a peer-client connection'''
-    def __init__(self, client_conn, client_addr, temp_dir, proxy):
+    def __init__(self, client_conn, client_addr, temp_dir, threads, proxy):
         threading.Thread.__init__(self)
         self.client_conn = client_conn
         self.client_addr = client_addr 
         self.temp_dir = temp_dir
+        self.threads = threads
         self.proxy = proxy
 
     def run(self):
@@ -27,13 +30,16 @@ class PeerClientThread(threading.Thread):
 
             # TODO: use Multiprocess to download using multithreading
 
-            # TODO: use tracker-config get filepath, proxy, timeouts, retries etc 
-
             # generate a random name for file 
             filepath = temp_dir + NameGenerator().generateName(12)
 
             # use request to download
-
+            # p = multiprocessing.Process(target=MultithreadedDownloader().download, 
+            #                             args=(msg['url'], msg['range-left'], 
+            #                                 msg['range-right'], filepath, 
+            #                                 self.temp_dir, self.threads, self.proxy)) 
+            # p.start()
+            # p.join()
             Downloader().download_range(
                 url=msg['url'], 
                 filepath=filepath, 
@@ -90,7 +96,7 @@ class ThreadedPeerServer:
         s.close()
         print("[-] Disconnected with Tracker.")
 
-    def listen(self, temp_dir, proxy):
+    def listen(self, temp_dir, threads, proxy):
         print("Server Proxy: ", proxy)
         self.sock.listen(5)
         print("[+] Listening for clients...")
@@ -99,7 +105,8 @@ class ThreadedPeerServer:
             print("[+] Client Connected: {}".format(client_addr))
             #client.settimeout(60)
             # assigning a thread to each client connected
-            new_client_thread = PeerClientThread(client_conn, client_addr, temp_dir, proxy)
+            new_client_thread = PeerClientThread(client_conn, client_addr, 
+                                                temp_dir, threads, proxy)
             #new_client_thread.daemon = True
             new_client_thread.start()
 
@@ -151,8 +158,10 @@ if __name__ == '__main__':
         # register the server with tracker
         server.registerWithTracker(tracker_server_address, bind_port)
 
+        proxy = peer_server_config.getProxy() 
+        threads = peer_server_config.getNumThreads()
         # listen for download requests from client
-        server.listen(temp_dir, peer_server_config.getProxy())
+        server.listen(temp_dir, threads, proxy)
 
     except:
         print("Oops!", sys.exc_info(), "occured.") 

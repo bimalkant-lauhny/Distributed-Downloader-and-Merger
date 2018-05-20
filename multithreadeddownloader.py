@@ -24,8 +24,6 @@ class MultithreadedDownloader:
 		self.temp_dir = None 
 		self.threads = None 
 		self.filepath = None 
-		self.filesize = None 
-		self.filename = None 
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 	# function for cleaning at program exit
@@ -81,14 +79,12 @@ class MultithreadedDownloader:
 				self.filehandle.deleteFile(tempfilepath)
 
 	# function to perform file download
-	def download(self, url, range_left, range_right, filename, filepath, 
-				filesize, temp_dir, response, threads, proxy=None):
+	def download(self, url, range_left, range_right, filepath, 
+				temp_dir, response, threads, proxy=None):
 
 		self.url = url
 		self.range_right = range_right
 		self.range_left = range_left
-		self.filename = filename
-		self.filesize = filesize
 		self.filepath = filepath		
 		self.temp_dir = temp_dir
 		self.threads = threads
@@ -97,8 +93,8 @@ class MultithreadedDownloader:
 		# if server supports segmented download
 		if self.range_download_support(response):
 			# get ranges for download for each thread
-			ranges_list = self.calculate.getDownloadRangesList(0, 
-															self.filesize-1, 
+			ranges_list = self.calculate.getDownloadRangesList(self.range_left, 
+															self.range_right,
 															self.threads)
 			# perform multithreaded download on single system
 			self.multithreaded_download(ranges_list)
@@ -109,8 +105,8 @@ class MultithreadedDownloader:
 				Download will be performed using single thread, on master system.''')	
 			self.download_handle.download_range(self.url,
 										self.filepath,
-										0, 
-										self.filesize-1,
+										self.range_left, 
+										self.range_right,
 										self.proxy)
 
 		# perform final cleaning after download completion
