@@ -4,10 +4,10 @@ import threading
 import multiprocessing
 import json
 from request import Request
-from multithreadeddownloader import MultithreadedDownloader
-from stringgenerator import NameGenerator
-from peerserverconfighandler import PeerServerConfigHandler
+from calculation import Calculation
 from filehandler import FileHandler
+from multithreadeddownloader import MultithreadedDownloader
+from peerserverconfighandler import PeerServerConfigHandler
 
 class PeerClientThread(threading.Thread):
     ''' class for a thread which handles a peer-client connection'''
@@ -30,7 +30,7 @@ class PeerClientThread(threading.Thread):
 
 
             # generate a random name for file 
-            filename = NameGenerator().generateName(12)
+            filename = Calculation().generateRandomString(12)
             filepath = temp_dir + filename
 
             # use request to download
@@ -48,7 +48,7 @@ class PeerClientThread(threading.Thread):
             p.start()
             p.join()
             print ('Out of process for file {}'.format(filename))
-            
+
             # send the downloaded file part to peer-client 
             self.sendFilePart(filepath)
 

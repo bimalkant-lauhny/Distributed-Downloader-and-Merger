@@ -1,3 +1,4 @@
+import random
 
 class Calculation:
     """ Class for calculations """
@@ -41,3 +42,23 @@ class Calculation:
             index += 1
 
         return ranges_list
+
+    # function to generate a random alphanumeric string of given length
+    def generateRandomString(self, length):
+
+        alphabets = ['a', 'b', 'c', 'd', 'e', 'f', 'g','h', 'i', 'j', 'k',
+        'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u','v', 'w', 'x', 'y', 
+        'z','A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '1',
+        '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+
+        max_length = 62
+
+        name = '';
+        index = random.randint(0,37273729);
+
+        for key in range(length):
+            index = (index + 6268282) % max_length
+            name += alphabets[index];
+            
+        return name 
