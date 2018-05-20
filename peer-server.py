@@ -3,7 +3,6 @@ import socket
 import threading
 import multiprocessing
 import json
-from downloader import Downloader 
 from request import Request
 from multithreadeddownloader import MultithreadedDownloader
 from stringgenerator import NameGenerator
@@ -29,7 +28,6 @@ class PeerClientThread(threading.Thread):
             print("[+] Received Message: {}".format(msg))
             msg = json.loads(msg)
 
-            # TODO: use Multiprocess to download using multithreading
 
             # generate a random name for file 
             filename = NameGenerator().generateName(12)
@@ -41,6 +39,7 @@ class PeerClientThread(threading.Thread):
             range_right = msg['range-right']
             response = Request().makeRequest(url, self.proxy)
 
+            # use Multiprocess to download using multithreading
             print("starting new process to download {}".format(filename))
             p = multiprocessing.Process(
                 target=MultithreadedDownloader().download,
@@ -48,8 +47,8 @@ class PeerClientThread(threading.Thread):
                     response, self.threads, self.proxy, )) 
             p.start()
             p.join()
-
             print ('Out of process for file {}'.format(filename))
+            
             # send the downloaded file part to peer-client 
             self.sendFilePart(filepath)
 

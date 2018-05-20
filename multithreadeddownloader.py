@@ -6,7 +6,7 @@ import shutil
 import threading
 import pathlib
 from filehandler import FileHandler
-from downloader import Downloader
+from request import Request
 from calculation import Calculation
 
 class MultithreadedDownloader:
@@ -15,7 +15,7 @@ class MultithreadedDownloader:
 
 	def __init__(self):
 		self.filehandle = FileHandler()
-		self.download_handle = Downloader()
+		self.request_handle = Request()
 		self.calculate = Calculation()
 		self.url = None 
 		self.range_left = None
@@ -27,7 +27,7 @@ class MultithreadedDownloader:
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 	# returns boolean value indicating support for range downloading
-	def range_download_support(self, resp):
+	def rangeDownloadSupport(self, resp):
 		try:
 			supported = (resp.headers['Accept-Ranges'] == 'bytes')
 		except KeyError:
@@ -36,11 +36,11 @@ class MultithreadedDownloader:
 		return supported
 
 	# function to perform multithreaded download
-	def multithreaded_download(self, ranges_list):
+	def multithreadedDownload(self, ranges_list):
 		# downloading each segment
 		for f in range(self.threads):
 			# calling Downloader.download_range() for each thread
-			t = threading.Thread(target=self.download_handle.download_range,
+			t = threading.Thread(target=self.request_handle.downloadRange,
 				kwargs={
 				'url': self.url,
 				'filepath': self.temp_dir + "/temp" + str(f), 
@@ -60,7 +60,7 @@ class MultithreadedDownloader:
 			t.join()	
 
 	# function to perform merging of parts performed by multiple threads on single system
-	def merge_multithreaded_download_parts(self):
+	def mergeMultithreadedDownloadParts(self):
 		# merging parts
 		with open(self.filepath,'wb') as wfd:
 			for f in range(self.threads):
@@ -83,19 +83,19 @@ class MultithreadedDownloader:
 		self.proxy = proxy
 
 		# if server supports segmented download
-		if self.range_download_support(response):
+		if self.rangeDownloadSupport(response):
 			# get ranges for download for each thread
 			ranges_list = self.calculate.getDownloadRangesList(self.range_left, 
 															self.range_right,
 															self.threads)
 			# perform multithreaded download on single system
-			self.multithreaded_download(ranges_list)
+			self.multithreadedDownload(ranges_list)
 			# merge multithreaded download parts
-			self.merge_multithreaded_download_parts()
+			self.mergeMultithreadedDownloadParts()
 		else:	
 			print('''Server doesn't support multithreaded downloads!
 				Download will be performed using single thread, on master system.''')	
-			self.download_handle.download_range(self.url,
+			self.request_handle.downloadRange(self.url,
 										self.filepath,
 										self.range_left, 
 										self.range_right,
