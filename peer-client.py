@@ -194,7 +194,11 @@ if __name__ == '__main__':
                     # delete copied segment
                     filehandle.deleteFile(tempfilepath)
     except:
-        print("Oops!", sys.exc_info(), "occured.")
+        print("Oops!", sys.exc_info()[0], "occured.")
+        # delete the file if error occured
+        filehandle.deleteFile(filepath)
     finally:
+        # delete temporary directory
+        filehandle.deleteDir(temp_dir)
         # exit
         sys.exit(0)

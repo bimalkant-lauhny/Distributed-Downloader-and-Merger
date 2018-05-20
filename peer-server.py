@@ -4,6 +4,7 @@ import threading
 import multiprocessing
 import json
 from downloader import Downloader 
+from request import Request
 from multithreadeddownloader import MultithreadedDownloader
 from stringgenerator import NameGenerator
 from peerserverconfighandler import PeerServerConfigHandler
@@ -31,22 +32,24 @@ class PeerClientThread(threading.Thread):
             # TODO: use Multiprocess to download using multithreading
 
             # generate a random name for file 
-            filepath = temp_dir + NameGenerator().generateName(12)
+            filename = NameGenerator().generateName(12)
+            filepath = temp_dir + filename
 
             # use request to download
-            # p = multiprocessing.Process(target=MultithreadedDownloader().download, 
-            #                             args=(msg['url'], msg['range-left'], 
-            #                                 msg['range-right'], filepath, 
-            #                                 self.temp_dir, self.threads, self.proxy)) 
-            # p.start()
-            # p.join()
-            Downloader().download_range(
-                url=msg['url'], 
-                filepath=filepath, 
-                range_left=msg['range-left'], 
-                range_right=msg['range-right'],
-                proxy=self.proxy)
+            url = msg['url']
+            range_left = msg['range-left']
+            range_right = msg['range-right']
+            response = Request().makeRequest(url, self.proxy)
 
+            print("starting new process to download {}".format(filename))
+            p = multiprocessing.Process(
+                target=MultithreadedDownloader().download,
+                args=(url, range_left, range_right, filepath, self.temp_dir, 
+                    response, self.threads, self.proxy, )) 
+            p.start()
+            p.join()
+
+            print ('Out of process for file {}'.format(filename))
             # send the downloaded file part to peer-client 
             self.sendFilePart(filepath)
 
@@ -150,6 +153,7 @@ if __name__ == '__main__':
         # port used by peer-server to communicate with tracker-server
         bind_port = peer_server_config.getServerTrackerBindPort() 
 
+        # make sure that temp_dir exists
         filehandle = FileHandler()
         filehandle.createDir(temp_dir)
 
@@ -164,12 +168,18 @@ if __name__ == '__main__':
         server.listen(temp_dir, threads, proxy)
 
     except:
-        print("Oops!", sys.exc_info(), "occured.") 
+        print("Oops!", sys.exc_info()[0], "occured.") 
 
     finally:
 
+        # stop peer server
         server.stop_server()
+
+        # unregister the server with tracker
         server.unregisterWithTracker(tracker_server_address, bind_port)
+
+        # delete the temporary directory
+        filehandle.deleteDir(temp_dir)
 
         # exit
         sys.exit(0)

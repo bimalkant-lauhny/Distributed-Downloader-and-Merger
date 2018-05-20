@@ -26,14 +26,6 @@ class MultithreadedDownloader:
 		self.filepath = None 
 		logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-	# function for cleaning at program exit
-	def final_clean(self, interrupted=False):
-		self.filehandle.deleteDir(self.temp_dir)
-		if interrupted == True:
-			''' delete the partially downloaded file if user interrupted
-			the download '''
-			self.filehandle.deleteFile(self.filepath)
-
 	# returns boolean value indicating support for range downloading
 	def range_download_support(self, resp):
 		try:
@@ -108,6 +100,3 @@ class MultithreadedDownloader:
 										self.range_left, 
 										self.range_right,
 										self.proxy)
-
-		# perform final cleaning after download completion
-		self.final_clean(interrupted=False)
