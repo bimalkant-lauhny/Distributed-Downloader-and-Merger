@@ -14,21 +14,23 @@ if __name__ == '__main__':
     
     try:
         peer_client_config = PeerClientConfigHandler()
-        peer_client_config.parseConfig()    
 
-        tracker_host = peer_client_config.getTrackerHost() 
-        tracker_port = peer_client_config.getTrackerPort() 
+        tracker_host = peer_client_config.tracker_host
+        tracker_port = peer_client_config.tracker_port
         tracker_server_address = (tracker_host, tracker_port)
 
-        temp_dir = peer_client_config.getTempDirPath()
-        download_dir = peer_client_config.getDownloadDirPath()
-        proxy = peer_client_config.getProxy()
-        threads = peer_client_config.getNumThreads()
+        temp_dir = peer_client_config.temp_dir
+        download_dir = peer_client_config.download_dir
+        proxy = peer_client_config.proxy
+        threads = peer_client_config.proxy
 
-        filehandle = FileHandler()
-        # make sure that the temp_dir and download_dir exist
-        filehandle.createDir(temp_dir)
-        filehandle.createDir(download_dir)
+        try:
+            filehandle = FileHandler()
+            # make sure that the temp_dir and download_dir exist
+            filehandle.createDir(os.path.abspath(temp_dir))
+            filehandle.createDir(os.path.abspath(download_dir))
+        except Exception as e:
+            print("Oops! Error: {}.".format(e))
 
         # check if download url supplied
         if (len(sys.argv) < 2):
@@ -37,10 +39,10 @@ if __name__ == '__main__':
         url = sys.argv[1]
         client = ThreadedPeerClient(url)
         # port used by peer-client to communicate with tracker
-        client_tracker_bind_port = peer_client_config.getClientTrackerBindPort() 
+        client_tracker_bind_port = peer_client_config.client_tracker_bind_port
 
         # fetch the list of active servers
-        client.fetchPeersList(tracker_server_address, client_tracker_bind_port)
+        client.fetch_peers_list(tracker_server_address, client_tracker_bind_port)
 
         # make request to url to get information about file
         req = Request()
@@ -58,7 +60,7 @@ if __name__ == '__main__':
             MultithreadedDownloader().download(url, 0, filesize-1, filepath, 
                                             temp_dir, response, threads, proxy)
         # if servers doesn't exist, use simple download
-        elif client.numPeerServers() == 0:
+        elif client.num_peer_servers() == 0:
             print ("No peer servers! Using default download...")
             MultithreadedDownloader().download(url, 0, filesize-1, filepath, 
                                             temp_dir, response, threads, proxy)
@@ -67,12 +69,12 @@ if __name__ == '__main__':
             print ("peer-client filesize: {}".format(filesize))
 
             # get the download ranges to be assigned to each
-            parts = client.numPeerServers()
+            parts = client.num_peer_servers()
             range_list = Calculation().getDownloadRangesList(0, filesize-1, parts)
 
             # connect with each server and send them the download details
-            client_server_bind_port = peer_client_config.getClientServerBindPort()
-            client.connectWithPeerServers(range_list, temp_dir, client_server_bind_port)
+            client_server_bind_port = peer_client_config.client_server_bind_port
+            client.connect_with_peer_servers(range_list, temp_dir, client_server_bind_port)
 
             # wait for download to complete at each server
             # except main_thread, calling join() for each thread
