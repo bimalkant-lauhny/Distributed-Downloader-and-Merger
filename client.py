@@ -27,8 +27,8 @@ if __name__ == '__main__':
         try:
             filehandle = FileHandler()
             # make sure that the temp_dir and download_dir exist
-            filehandle.createDir(os.path.abspath(temp_dir))
-            filehandle.createDir(os.path.abspath(download_dir))
+            filehandle.create_dir(os.path.abspath(temp_dir))
+            filehandle.create_dir(os.path.abspath(download_dir))
         except Exception as e:
             print("Oops! Error: {}.".format(e))
 
@@ -93,15 +93,15 @@ if __name__ == '__main__':
                     with open(tempfilepath, "rb") as fd:
                         shutil.copyfileobj(fd, wfd)     
                     # delete copied segment
-                    filehandle.deleteFile(tempfilepath)
+                    filehandle.delete_file(tempfilepath)
     except ConnectionError:
         print ("Connection Error! Falling back to download at client...")
     except Exception as e:
         print("Oops! Error: {}.".format(e))
         # delete the file if error occured
-        filehandle.deleteFile(filepath)
+        filehandle.delete_file(filepath)
     finally:
         # delete temporary directory
-        filehandle.deleteDir(temp_dir)
+        filehandle.delete_dir(temp_dir)
         # exit
         sys.exit(0)

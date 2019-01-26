@@ -22,7 +22,7 @@ if __name__ == '__main__':
     bind_port = peer_server_config.server_tracker_bind_port
 
     filehandle = FileHandler()
-    filehandle.createDir(temp_dir)
+    filehandle.create_dir(temp_dir)
     try:
 
         server = ThreadedPeerServer(peer_server_address)
@@ -46,7 +46,7 @@ if __name__ == '__main__':
             server.unregister_with_tracker(tracker_server_address, bind_port)
 
         # delete the temporary directory
-        filehandle.deleteDir(temp_dir)
+        filehandle.delete_dir(temp_dir)
 
         # exit
         sys.exit(0)

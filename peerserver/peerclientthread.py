@@ -70,7 +70,7 @@ class PeerClientThread(threading.Thread):
             print("[-] Client Disconnected: {}".format(self.client_addr))
 
             # delete temp file
-            FileHandler().deleteFile(filepath)
+            FileHandler().delete_file(filepath)
             print("[-] Temp File Deleted.")
 
     def send_file_part(self, filepath):
