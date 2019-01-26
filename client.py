@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
         # make request to url to get information about file
         req = Request()
-        response = req.makeRequest(url, proxy=proxy)
-        req.closeConnection(response) 
+        response = req.make_request(url, proxy=proxy)
+        req.close_connection(response) 
 
         # get the filesize
         filesize = int(response.headers['Content-Length'])

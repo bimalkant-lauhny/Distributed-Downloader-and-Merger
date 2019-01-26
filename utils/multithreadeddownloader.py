@@ -40,7 +40,7 @@ class MultithreadedDownloader:
 		# downloading each segment
 		for f in range(self.threads):
 			# calling Downloader.download_range() for each thread
-			t = threading.Thread(target=self.request_handle.downloadRange,
+			t = threading.Thread(target=self.request_handle.download_range,
 				kwargs={
 				'url': self.url,
 				'filepath': self.temp_dir + "/temp" + str(f), 
@@ -68,7 +68,7 @@ class MultithreadedDownloader:
 				with open(tempfilepath, "rb") as fd:
 					shutil.copyfileobj(fd, wfd)		
 				# delete copied segment
-				self.filehandle.deleteFile(tempfilepath)
+				self.filehandle.delete_file(tempfilepath)
 
 	# function to perform file download
 	def download(self, url, range_left, range_right, filepath, 
@@ -85,7 +85,7 @@ class MultithreadedDownloader:
 		# if server supports segmented download
 		if self.rangeDownloadSupport(response):
 			# get ranges for download for each thread
-			ranges_list = self.calculate.getDownloadRangesList(self.range_left, 
+			ranges_list = self.calculate.get_download_ranges_list(self.range_left, 
 															self.range_right,
 															self.threads)
 			# perform multithreaded download on single system
@@ -95,7 +95,7 @@ class MultithreadedDownloader:
 		else:	
 			print('''Server doesn't support multithreaded downloads!
 				Download will be performed using single thread, on master system.''')	
-			self.request_handle.downloadRange(self.url,
+			self.request_handle.download_range(self.url,
 										self.filepath,
 										self.range_left, 
 										self.range_right,

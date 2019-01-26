@@ -23,7 +23,7 @@ class PeerThread(threading.Thread):
             if msg == "addme":
                 # peer-server wants to act as server
                 self.tracker.add_peer(self.peer_addr)
-                print("Updated trackers list: {}".format(self.tracker.getPeerServersList()))
+                print("Updated trackers list: {}".format(self.tracker.get_peer_servers_list()))
                 self.close_connection()
                 print("[-] Peer Server Added to List: {}".format(self.peer_addr))
             elif msg == "sendpeerslist":
@@ -38,7 +38,7 @@ class PeerThread(threading.Thread):
             elif msg == "removeme":
                 # peer-server wants to leave the network
                 self.tracker.remove_peer(self.peer_addr)
-                print("Updated trackers list: {}".format(self.tracker.get_peer_servers_ilist()))
+                print("Updated trackers list: {}".format(self.tracker.get_peer_servers_list()))
                 self.close_connection()
                 print("[-] Peer Server removed from List: {}".format(self.peer_addr))
 

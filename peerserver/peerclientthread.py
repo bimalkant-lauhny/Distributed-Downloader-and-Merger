@@ -38,7 +38,7 @@ class PeerClientThread(threading.Thread):
             url = msg['url']
             range_left = msg['range-left']
             range_right = msg['range-right']
-            response = Request().makeRequest(url, self.proxy)
+            response = Request().make_request(url, self.proxy)
 
             # use Multiprocess to download using multithreading
             print("starting new process to download {}".format(filename))
