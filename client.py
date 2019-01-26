@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
             # get the download ranges to be assigned to each
             parts = client.num_peer_servers()
-            range_list = Calculation().getDownloadRangesList(0, filesize-1, parts)
+            range_list = Calculation().get_download_ranges_list(0, filesize-1, parts)
 
             # connect with each server and send them the download details
             client_server_bind_port = peer_client_config.client_server_bind_port

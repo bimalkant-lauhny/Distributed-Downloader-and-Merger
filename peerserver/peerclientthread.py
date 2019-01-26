@@ -31,7 +31,7 @@ class PeerClientThread(threading.Thread):
             msg = json.loads(msg)
 
             # generate a random name for file
-            filename = Calculation().generateRandomString(12)
+            filename = Calculation().generate_random_string(12)
             filepath = self.temp_dir + filename
 
             # use request to download
