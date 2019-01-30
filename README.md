@@ -22,8 +22,12 @@ Peer servers download range of files assigned to them by peer clients and send f
 
 ### How to run?
 
-You need to install `Python 3` and `pip` to run this project. It is recommended that you should try this project on a network 
-of multiple systems with Linux OS installed.
+Some important points to consider before running DDM -
+* You need to install `Python 3` and `pip` to run this project. 
+* It is recommended that you should try this project on a network of multiple systems. Each system should have active
+internet connections and Linux based OS. 
+* It is recommended that you create a python virtual environment to install packages from `requirements.txt`.
+* Since `server.py` and `client.py` need to create files and directories, you might have to run these using `sudo`.
 
 1. Clone the repo in all the systems which plan to run DDM.
 2. Open the terminal and go into the directory where DDM is cloned.
@@ -42,3 +46,10 @@ specified in config file.
 
 NOTE : DDM is just a fun project that I worked on. There is still room for lot of improvements. So, please feel free to
 try DDM, submit issues, feature requests and bug fixes.
+
+### TODO - A list of possible enhancements
+
+1. Graphical User Interface - A GUI that would allow to change settings (which are stored in configfiles), adding download url,
+showing download progress etc.
+2. Packaging to support install in different Operating systems like deb, rpm etc.
+3. Porting to other platforms like Android, Windows, Mac etc.
