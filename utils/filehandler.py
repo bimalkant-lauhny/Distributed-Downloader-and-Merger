@@ -18,7 +18,7 @@ class FileHandler:
     def create_dir(self, dirpath):
         """ create directory at dirpath """
         try:
-            os.mkdir(dirpath)
+            os.makedirs(dirpath)
         except Exception as err:
             print("Error: {0}".format(err))
 
