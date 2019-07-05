@@ -22,7 +22,7 @@ if __name__ == '__main__':
         temp_dir = peer_client_config.temp_dir
         download_dir = peer_client_config.download_dir
         proxy = peer_client_config.proxy
-        threads = peer_client_config.proxy
+        threads = peer_client_config.threads
 
         try:
             filehandle = FileHandler()
